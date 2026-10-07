@@ -5,13 +5,12 @@ const { can, user: me } = usePermissions()
 if (!can('manageUsers')) await navigateTo('/')
 
 const { data: users, refresh } = await useFetch('/api/users', { default: () => [] })
-const { data: lines } = await useBudgetLines()
-const bureaus = computed(() => [...new Set(lines.value.map(l => l.bureau).filter(Boolean))])
+type UserRow = (typeof users.value)[number]
 
-/** 行ごとの編集中の値 */
-const drafts = reactive<Record<string, { role: Role, bureau: string }>>({})
+/** 行ごとの編集中の権限 */
+const drafts = reactive<Record<string, Role>>({})
 watchEffect(() => {
-  for (const u of users.value) drafts[u.email] ??= { role: u.role, bureau: u.bureau }
+  for (const u of users.value) drafts[u.email] ??= u.role
 })
 const saving = ref<string>()
 const messages = reactive<Record<string, { ok: boolean, text: string }>>({})
@@ -19,23 +18,18 @@ const messages = reactive<Record<string, { ok: boolean, text: string }>>({})
 const query = ref('')
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
-  return users.value.filter(u => !q || `${u.email} ${u.name} ${ROLE_LABELS[u.role]} ${u.bureau}`.toLowerCase().includes(q))
+  return users.value.filter(u => !q || `${u.email} ${u.name} ${ROLE_LABELS[u.role]}`.toLowerCase().includes(q))
 })
 
-const changed = (u: (typeof users.value)[number]) =>
-  drafts[u.email] && (drafts[u.email]!.role !== u.role || drafts[u.email]!.bureau !== u.bureau)
+const changed = (u: UserRow) => drafts[u.email] != null && drafts[u.email] !== u.role
 
 async function save(email: string) {
-  const d = drafts[email]!
+  const role = drafts[email]!
   saving.value = email
   delete messages[email]
   try {
-    await $fetch<unknown>(`/api/users/${encodeURIComponent(email)}`, {
-      method: 'PATCH',
-      body: { role: d.role, bureau: d.role === 'bureau_head' ? d.bureau : '' },
-    })
+    await $fetch<unknown>(`/api/users/${encodeURIComponent(email)}`, { method: 'PATCH', body: { role } })
     await refresh()
-    drafts[email] = { role: d.role, bureau: d.role === 'bureau_head' ? d.bureau : '' }
     messages[email] = { ok: true, text: '保存しました' }
   }
   catch (error) {
@@ -46,8 +40,8 @@ async function save(email: string) {
   }
 }
 
-async function remove(u: (typeof users.value)[number]) {
-  if (!confirm(`${u.name}（${u.email}）を削除しますか？\n過去の申請は残ります。次にログインすると一般委員として登録し直されます。`)) return
+async function remove(u: UserRow) {
+  if (!confirm(`${u.name}（${u.email}）を削除しますか？\n過去の申請は残ります。次にログインすると一般として登録し直されます。`)) return
   delete messages[u.email]
   try {
     await $fetch<unknown>(`/api/users/${encodeURIComponent(u.email)}`, { method: 'DELETE' })
@@ -60,7 +54,7 @@ async function remove(u: (typeof users.value)[number]) {
 }
 
 /** 委員の追加（まだログインしていない人にも先に権限を付けられる） */
-const newUser = reactive({ email: '', name: '', role: 'member' as Role, bureau: '' })
+const newUser = reactive({ email: '', name: '', role: 'member' as Role })
 const adding = ref(false)
 const addErrors = ref<string[]>([])
 const added = ref('')
@@ -69,9 +63,9 @@ async function add() {
   addErrors.value = []
   added.value = ''
   try {
-    await $fetch<unknown>('/api/users', { method: 'POST', body: { ...newUser, bureau: newUser.role === 'bureau_head' ? newUser.bureau : '' } })
+    await $fetch<unknown>('/api/users', { method: 'POST', body: newUser })
     added.value = `${newUser.email} を${ROLE_LABELS[newUser.role]}として登録しました`
-    Object.assign(newUser, { email: '', name: '', role: 'member', bureau: '' })
+    Object.assign(newUser, { email: '', name: '', role: 'member' })
     await refresh()
   }
   catch (error) {
@@ -84,11 +78,10 @@ async function add() {
 
 const PERMISSION_LABELS: Record<Permission, string> = {
   viewAllEntries: '全申請の閲覧（台帳）',
-  viewBureauEntries: '担当局の申請の閲覧',
   viewBankAccount: '口座情報の閲覧',
   executeEntries: '対応済み操作',
   importBudget: '予算の取り込み',
-  manageUsers: 'ユーザーの権限変更',
+  manageUsers: '委員の登録・権限変更',
 }
 const formatDate = (d: string | Date | null) => (d ? new Date(d).toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' }) : '未ログイン')
 </script>
@@ -97,8 +90,8 @@ const formatDate = (d: string | Date | null) => (d ? new Date(d).toLocaleString(
   <section>
     <h1>ユーザーと権限</h1>
     <p class="hint">
-      委員をメールアドレスで先に登録して権限を付けておけます。登録していない人も、初回ログインで「一般委員」として一覧に加わります。
-      権限の変更は、その人の次の操作から反映されます。
+      財務局長だけが台帳・口座情報・対応済み操作・予算の取り込み・この画面を使えます。それ以外の人は「一般」です。
+      委員をメールアドレスで先に登録しておくこともでき、登録していない人も初回ログインで「一般」として一覧に加わります。
     </p>
 
     <form class="card add" @submit.prevent="add">
@@ -110,13 +103,6 @@ const formatDate = (d: string | Date | null) => (d ? new Date(d).toLocaleString(
           <select v-model="newUser.role">
             <option v-for="r in ROLES" :key="r" :value="r">{{ ROLE_LABELS[r] }}</option>
           </select>
-        </label>
-        <label v-if="newUser.role === 'bureau_head'">担当局
-          <select v-if="bureaus.length" v-model="newUser.bureau" required>
-            <option value="" disabled>選んでください</option>
-            <option v-for="b in bureaus" :key="b" :value="b">{{ b }}</option>
-          </select>
-          <input v-else v-model="newUser.bureau" placeholder="財務局" required>
         </label>
       </div>
       <ul v-if="addErrors.length" class="error"><li v-for="e in addErrors" :key="e">{{ e }}</li></ul>
@@ -133,56 +119,41 @@ const formatDate = (d: string | Date | null) => (d ? new Date(d).toLocaleString(
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(label, p) in PERMISSION_LABELS" :key="p">
-            <th>{{ label }}</th>
-            <td v-for="r in ROLES" :key="r" class="mark">{{ (PERMISSIONS[p] as readonly Role[]).includes(r) ? '○' : '' }}</td>
-          </tr>
           <tr>
             <th>申請・自分の申請の閲覧</th>
             <td v-for="r in ROLES" :key="r" class="mark">○</td>
+          </tr>
+          <tr v-for="(label, p) in PERMISSION_LABELS" :key="p">
+            <th>{{ label }}</th>
+            <td v-for="r in ROLES" :key="r" class="mark">{{ (PERMISSIONS[p] as readonly Role[]).includes(r) ? '○' : '' }}</td>
           </tr>
         </tbody>
       </table>
     </details>
 
-    <input v-model="query" type="search" class="search" placeholder="絞り込み（メール・氏名・権限・局）">
+    <input v-model="query" type="search" class="search" placeholder="絞り込み（メール・氏名・権限）">
 
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>氏名</th><th>メール</th><th>権限</th><th>担当局（局長のみ）</th><th>最終ログイン</th><th /></tr>
+          <tr><th>氏名</th><th>メール</th><th>権限</th><th>最終ログイン</th><th /></tr>
         </thead>
         <tbody>
           <tr v-for="u in filtered" :key="u.email">
             <td>{{ u.name }}<small v-if="u.email === me?.email">（自分）</small></td>
             <td>{{ u.email }}</td>
             <td>
-              <select v-if="drafts[u.email]" v-model="drafts[u.email]!.role" :disabled="u.bootstrapAdmin">
+              <select v-model="drafts[u.email]" :disabled="u.bootstrapAdmin">
                 <option v-for="r in ROLES" :key="r" :value="r">{{ ROLE_LABELS[r] }}</option>
               </select>
-              <small v-if="u.bootstrapAdmin" class="hint">環境変数で管理者に固定</small>
-            </td>
-            <td>
-              <template v-if="drafts[u.email]?.role === 'bureau_head'">
-                <select v-if="bureaus.length" v-model="drafts[u.email]!.bureau">
-                  <option value="" disabled>選んでください</option>
-                  <option v-for="b in bureaus" :key="b" :value="b">{{ b }}</option>
-                </select>
-                <input v-else v-model="drafts[u.email]!.bureau" placeholder="財務局">
-              </template>
+              <small v-if="u.bootstrapAdmin" class="hint">環境変数で財務局長に固定</small>
             </td>
             <td class="nowrap">{{ formatDate(u.lastLoginAt) }}</td>
             <td class="nowrap">
               <button v-if="changed(u)" :disabled="saving === u.email" @click="save(u.email)">
                 {{ saving === u.email ? '保存中…' : '保存' }}
               </button>
-              <button
-                v-if="u.email !== me?.email && !u.bootstrapAdmin"
-                class="secondary"
-                @click="remove(u)"
-              >
-                削除
-              </button>
+              <button v-if="u.email !== me?.email && !u.bootstrapAdmin" class="secondary" @click="remove(u)">削除</button>
               <span v-if="messages[u.email]" :class="messages[u.email]!.ok ? 'ok' : 'error'">{{ messages[u.email]!.text }}</span>
             </td>
           </tr>
@@ -193,16 +164,16 @@ const formatDate = (d: string | Date | null) => (d ? new Date(d).toLocaleString(
 </template>
 
 <style scoped>
-.perms { max-width: 720px; margin: 1rem 0; padding: .75rem 1rem; }
+.perms { max-width: 560px; margin: 0 0 1rem; padding: .75rem 1rem; }
 .perms summary { cursor: pointer; font-weight: 600; }
 .perms table { margin-top: .5rem; }
 .perms .mark { text-align: center; color: var(--done); font-weight: 700; }
 .search { max-width: 420px; margin-bottom: .75rem; }
 .nowrap { white-space: nowrap; }
-td select, td input { min-width: 9rem; }
+td select { min-width: 9rem; }
 .ok { color: var(--done); margin-left: .5rem; }
 .error { margin-left: .5rem; }
-.add { max-width: none; margin-bottom: 1.5rem; }
+.add { max-width: none; margin-bottom: 1rem; }
 .add h2 { font-size: 1rem; margin: 0; }
 .add-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .75rem; }
 td button + button { margin-left: .5rem; }

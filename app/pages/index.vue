@@ -1,11 +1,9 @@
 <script setup lang="ts">
 const { can, entriesTitle } = usePermissions()
 
-const entriesDescription = computed(() => {
-  if (can('executeEntries')) return '番号順・申請順・形態別の一覧と対応済み処理'
-  if (can('viewBureauEntries')) return '自分と担当局の申請と対応状況'
-  return '申請した内容と対応状況'
-})
+const entriesDescription = computed(() =>
+  can('executeEntries') ? '番号順・申請順・形態別の一覧と対応済み処理' : '申請した内容と対応状況',
+)
 </script>
 
 <template>
@@ -28,7 +26,7 @@ const entriesDescription = computed(() => {
     </NuxtLink>
     <NuxtLink v-if="can('manageUsers')" to="/users" class="tile">
       <h2>ユーザー</h2>
-      <p>権限（一般委員・局長・会計担当・管理者）の変更</p>
+      <p>委員の登録と権限（一般・財務局長）の変更</p>
     </NuxtLink>
   </section>
 </template>

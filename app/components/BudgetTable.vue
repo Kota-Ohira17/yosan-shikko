@@ -2,7 +2,7 @@
 /**
  * 予算明細を本予算スプレッドシート「支出」シートと同じ形の表で表示する。
  * 局・担当・款・項・目は見出しの行として出し、金額のある行（明細）を選べるようにする。
- * 明細のすぐ上の見出し（例:「インク代」）を押すと、その下の明細をまとめて選択・解除できる。
+ * 款から下の見出し（例:「委員会設備等関連費」「インク代」）を押すと、その下の明細をすべてまとめて選択・解除できる。
  * selected を渡さなければ閲覧専用。
  */
 const props = defineProps<{
@@ -67,44 +67,33 @@ function lineCells(l: BudgetLineView): Row['cells'] {
 
 const table = computed(() => {
   const rows: Row[] = []
-  /** 見出し（path）→ そのすぐ下にある明細の key */
-  const children = new Map<string, string[]>()
-  /** 見出し（path）→ その下（孫以下も含む）の明細の数 */
-  const descendants = new Map<string, number>()
+  /** 見出し（path）→ その下（孫以下も含む）にある明細の key */
+  const descendants = new Map<string, string[]>()
   let prev: string[] = []
   for (const l of props.lines) {
     // この明細より上の階層（数量だけの行なら節まで）を見出しとして出す
     const own = l.level === 'none' ? LEVELS.length : LEVELS.indexOf(l.level)
     const prefixes: string[] = []
     let changed = false
-    let parent: string | undefined
     LEVELS.forEach((level, i) => {
       prefixes[i] = `${prefixes[i - 1] ?? ''}/${value(l, level)}`
       if (i >= own || !value(l, level)) return
-      if (GROUP_LEVELS.includes(level)) {
-        parent = prefixes[i]
-        descendants.set(prefixes[i]!, (descendants.get(prefixes[i]!) ?? 0) + 1)
-      }
+      if (GROUP_LEVELS.includes(level)) descendants.set(prefixes[i]!, [...(descendants.get(prefixes[i]!) ?? []), l.key])
       if (!changed && prefixes[i] === prev[i]) return
       changed = true
       rows.push({ id: `g${rows.length}`, kind: 'group', level, cells: headerCells(l, level), path: prefixes[i] })
     })
     rows.push({ id: l.key, kind: 'line', level: l.level === 'none' ? 'setsu' : l.level, cells: lineCells(l), line: l })
-    if (parent) children.set(parent, [...(children.get(parent) ?? []), l.key])
     prev = prefixes
   }
-  return { rows, children, descendants }
+  return { rows, descendants }
 })
 const rows = computed(() => table.value.rows)
 
-/**
- * 見出しの行の選択状態。まとめて選べるのは、下にあるのがすべて明細の見出し（明細のちょうど一つ上の層）だけ。
- * さらに見出しを含む見出し（例:「大判印刷機関連費」）は、押しても一部しか選ばれず紛らわしいので対象外。
- */
+/** 見出しの行の選択状態（款から下の見出しは、その下の明細をすべてまとめて選べる） */
 function groupState(row: Row) {
-  const keys = row.path ? table.value.children.get(row.path) : undefined
+  const keys = row.path ? table.value.descendants.get(row.path) : undefined
   if (!selectable.value || !keys?.length || !GROUP_LEVELS.includes(row.level as Level)) return undefined
-  if (table.value.descendants.get(row.path!) !== keys.length) return undefined
   const on = keys.filter(k => props.selected?.includes(k)).length
   return { keys, all: on === keys.length, some: on > 0 && on < keys.length }
 }

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { can, type Permission } from '../../shared/roles'
 import type { User } from '../db/schema'
 
-/** 環境変数 NUXT_ADMIN_EMAILS のユーザー。ログインのたびに管理者になる（最初の管理者を作るため） */
+/** 環境変数 NUXT_ADMIN_EMAILS のユーザー。ログインのたびに財務局長になる（最初の財務局長を作るため） */
 export function isBootstrapAdmin(email: string) {
   const { adminEmails } = useRuntimeConfig()
   return adminEmails
@@ -19,12 +19,12 @@ export function isAllowedEmail(email: string) {
 }
 
 function toSessionUser(u: User) {
-  return { email: u.email, name: u.name, role: u.role, bureau: u.bureau }
+  return { email: u.email, name: u.name, role: u.role }
 }
 
 /**
  * ログインの入口はここだけ。どの認証方式（Google / 委員会のログイン / 開発用）でも、
- * 本人確認ができたらこれを呼ぶ。初回はユーザーを「一般委員」で作り、以降は名前と最終ログインを更新する。
+ * 本人確認ができたらこれを呼ぶ。初回はユーザーを「一般」で作り、以降は名前と最終ログインを更新する。
  */
 export async function loginAs(event: H3Event, rawEmail: string, name: string) {
   const email = rawEmail.trim().toLowerCase()
@@ -53,7 +53,7 @@ export async function requireUser(event: H3Event) {
     throw createError({ statusCode: 401, message: 'もう一度ログインしてください' })
   }
   const current = toSessionUser(user)
-  if (current.role !== session.user.role || current.bureau !== session.user.bureau || current.name !== session.user.name) {
+  if (current.role !== session.user.role || current.name !== session.user.name) {
     await setUserSession(event, { user: current, loggedInAt: session.loggedInAt })
   }
   return current
@@ -69,9 +69,8 @@ export async function requirePermission(event: H3Event, permission: Permission) 
 
 export type SessionUser = Awaited<ReturnType<typeof requireUser>>
 
-/** その申請を見てよいか（本人・同じ局の局長・全件閲覧できる人） */
-export function canSeeEntry(user: SessionUser, entry: { applicantEmail: string, department: string }) {
+/** その申請を見てよいか（本人・全件閲覧できる人） */
+export function canSeeEntry(user: SessionUser, entry: { applicantEmail: string }) {
   return can(user.role, 'viewAllEntries')
     || entry.applicantEmail === user.email
-    || (can(user.role, 'viewBureauEntries') && user.bureau !== '' && entry.department === user.bureau)
 }

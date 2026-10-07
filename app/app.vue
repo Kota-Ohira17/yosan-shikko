@@ -26,7 +26,7 @@ async function logout() {
         <NuxtLink v-if="can('manageUsers')" to="/users">ユーザー</NuxtLink>
       </nav>
       <div v-if="loggedIn" class="me">
-        <span>{{ user?.name }}<small>（{{ roleLabel }}{{ user?.role === 'bureau_head' ? `・${user.bureau}` : '' }}）</small></span>
+        <span>{{ user?.name }}<small>（{{ roleLabel }}）</small></span>
         <button class="link" @click="logout">ログアウト</button>
       </div>
     </header>

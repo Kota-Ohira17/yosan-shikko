@@ -39,7 +39,7 @@ export const entries = sqliteTable('entries', {
   /** 振込期限・必要日・立替予定日・執行希望日・(証憑)立替日 */
   deadline: text('deadline'),
   remark: text('remark').notNull().default(''),
-  /** 形態ごとの追加項目。口座情報は details.bank に入り、会計担当以外には返さない */
+  /** 形態ごとの追加項目。口座情報は details.bank に入り、財務局長以外には返さない */
   details: text('details', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
   attachmentId: integer('attachment_id').references(() => attachments.id),
   /** 執行時に確定する執行形態（振込（SMBC）/ 口座引落 / 立替 など） */
@@ -56,7 +56,7 @@ export const counters = sqliteTable('counters', {
 export type Entry = typeof entries.$inferSelect
 
 /**
- * 本予算「支出」シートの明細（金額のある行）。会計担当が CSV を取り込むたびに全件入れ替える。
+ * 本予算「支出」シートの明細（金額のある行）。財務局長が CSV を取り込むたびに全件入れ替える。
  * key は「項目番号|名前|数量」で、取り込み直しても同じ明細なら同じ key になる。
  */
 export const budgetLines = sqliteTable('budget_lines', {
@@ -103,17 +103,15 @@ export type BudgetLine = typeof budgetLines.$inferSelect
 export type EntryItem = typeof entryItems.$inferSelect
 
 /**
- * ユーザーと権限。管理者が画面で先に登録するか、初回ログイン時に「一般委員」で作られる。
- * 環境変数 NUXT_ADMIN_EMAILS のユーザーはログインのたびに管理者に戻る（最初の管理者を作るため）。
+ * ユーザーと権限。財務局長が画面で先に登録するか、初回ログイン時に「一般」で作られる。
+ * 環境変数 NUXT_ADMIN_EMAILS のユーザーはログインのたびに財務局長に戻る（最初の財務局長を作るため）。
  */
 export const users = sqliteTable('users', {
   email: text('email').primaryKey(),
   name: text('name').notNull(),
   role: text('role', { enum: ROLES }).notNull().default('member'),
-  /** 局長の担当局。申請の「局」と一致する申請を閲覧できる */
-  bureau: text('bureau').notNull().default(''),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-  /** 管理者が先に登録して、まだログインしていない人は null */
+  /** 財務局長が先に登録して、まだログインしていない人は null */
   lastLoginAt: integer('last_login_at', { mode: 'timestamp_ms' }),
 })
 

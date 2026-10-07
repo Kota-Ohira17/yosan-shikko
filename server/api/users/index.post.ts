@@ -1,5 +1,5 @@
 /**
- * 委員を先に登録して権限を付ける（管理者のみ）。まだログインしていない人にも権限を用意しておける。
+ * 委員を先に登録して権限を付ける（財務局長のみ）。まだログインしていない人にも権限を用意しておける。
  * 本人が初めてログインしたとき、ここで付けた権限がそのまま使われる。
  */
 export default defineEventHandler(async (event) => {
@@ -15,7 +15,6 @@ export default defineEventHandler(async (event) => {
       email: body.email,
       name: body.name || body.email.split('@')[0]!,
       role: body.role,
-      bureau: body.role === 'bureau_head' ? body.bureau : '',
       createdAt: new Date(),
       lastLoginAt: null,
     })

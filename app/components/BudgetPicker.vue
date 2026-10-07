@@ -67,7 +67,7 @@ function toggleMany(keys: string[], on: boolean) {
 
     <BudgetTable v-if="filtered.length" :lines="filtered" :selected="current" @toggle="toggle" @toggle-many="toggleMany" />
     <p v-else class="hint">該当する明細がありません。</p>
-    <p class="hint">金額の入っている行をクリックすると選択できます（複数可）。すぐ上の見出しの行（例:「インク代」）を押すと、その下の明細をまとめて選択・解除できます。</p>
+    <p class="hint">金額の入っている行をクリックすると選択できます（複数可）。款から下の見出しの行（例:「委員会設備等関連費」「インク代」）を押すと、その下の明細をすべてまとめて選択・解除できます。</p>
   </div>
 </template>
 

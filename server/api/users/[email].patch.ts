@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-/** ユーザーの権限・担当局を変える（管理者のみ） */
+/** ユーザーの権限を変える（財務局長のみ） */
 export default defineEventHandler(async (event) => {
   await requirePermission(event, 'manageUsers')
   const email = decodeURIComponent(getRouterParam(event, 'email') ?? '').toLowerCase()
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
   const [updated] = await useDb()
     .update(schema.users)
-    .set({ role: body.role, bureau: body.role === 'bureau_head' ? body.bureau : '' })
+    .set({ role: body.role })
     .where(eq(schema.users.email, email))
     .returning()
   return toUserView(updated!)

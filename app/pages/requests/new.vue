@@ -124,7 +124,7 @@ async function onSubmit() {
             <label>口座番号<input v-model="form.bank.accountNumber" inputmode="numeric" pattern="\d{1,8}" required></label>
           </div>
           <label>口座名義<input v-model="form.bank.accountName" required></label>
-          <p class="hint">口座情報は会計担当だけが閲覧でき、Slack通知には含まれません。</p>
+          <p class="hint">口座情報は財務局長だけが閲覧でき、Slack通知には含まれません。</p>
         </template>
 
         <template v-else-if="form.type === '発注'">

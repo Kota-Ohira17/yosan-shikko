@@ -36,6 +36,13 @@
       "when": 1791385076394,
       "tag": "0004_users_preregister",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791386412656,
+      "tag": "0005_two_roles",
+      "breakpoints": true
     }
   ]
 }

@@ -12,7 +12,7 @@ export default defineNitroPlugin(() => {
       await clearUserSession(event)
       throw createError({ statusCode: 401, message: 'もう一度ログインしてください' })
     }
-    const current = { email: user.email, name: user.name, role: user.role, bureau: user.bureau }
+    const current = { email: user.email, name: user.name, role: user.role }
     session.user = current
     await setUserSession(event, { user: current, loggedInAt: session.loggedInAt })
   })
