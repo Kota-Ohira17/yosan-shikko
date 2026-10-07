@@ -30,6 +30,13 @@ function toggle(key: string) {
     : [...current.value, key]
   selected.value = current.value
 }
+
+function toggleMany(keys: string[], on: boolean) {
+  current.value = on
+    ? [...current.value, ...keys.filter(k => !current.value.includes(k))]
+    : current.value.filter(k => !keys.includes(k))
+  selected.value = current.value
+}
 </script>
 
 <template>
@@ -58,9 +65,9 @@ function toggle(key: string) {
       </label>
     </div>
 
-    <BudgetTable v-if="filtered.length" :lines="filtered" :selected="current" @toggle="toggle" />
+    <BudgetTable v-if="filtered.length" :lines="filtered" :selected="current" @toggle="toggle" @toggle-many="toggleMany" />
     <p v-else class="hint">該当する明細がありません。</p>
-    <p class="hint">金額の入っている行をクリックすると選択できます（複数可）。</p>
+    <p class="hint">金額の入っている行をクリックすると選択できます（複数可）。すぐ上の見出しの行（例:「インク代」）を押すと、その下の明細をまとめて選択・解除できます。</p>
   </div>
 </template>
 

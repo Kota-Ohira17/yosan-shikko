@@ -29,6 +29,13 @@
       "when": 1791384136563,
       "tag": "0003_users",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791385076394,
+      "tag": "0004_users_preregister",
+      "breakpoints": true
     }
   ]
 }

@@ -46,6 +46,42 @@ async function save(email: string) {
   }
 }
 
+async function remove(u: (typeof users.value)[number]) {
+  if (!confirm(`${u.name}（${u.email}）を削除しますか？\n過去の申請は残ります。次にログインすると一般委員として登録し直されます。`)) return
+  delete messages[u.email]
+  try {
+    await $fetch<unknown>(`/api/users/${encodeURIComponent(u.email)}`, { method: 'DELETE' })
+    delete drafts[u.email]
+    await refresh()
+  }
+  catch (error) {
+    messages[u.email] = { ok: false, text: toMessages(error).join(' / ') }
+  }
+}
+
+/** 委員の追加（まだログインしていない人にも先に権限を付けられる） */
+const newUser = reactive({ email: '', name: '', role: 'member' as Role, bureau: '' })
+const adding = ref(false)
+const addErrors = ref<string[]>([])
+const added = ref('')
+async function add() {
+  adding.value = true
+  addErrors.value = []
+  added.value = ''
+  try {
+    await $fetch<unknown>('/api/users', { method: 'POST', body: { ...newUser, bureau: newUser.role === 'bureau_head' ? newUser.bureau : '' } })
+    added.value = `${newUser.email} を${ROLE_LABELS[newUser.role]}として登録しました`
+    Object.assign(newUser, { email: '', name: '', role: 'member', bureau: '' })
+    await refresh()
+  }
+  catch (error) {
+    addErrors.value = toMessages(error)
+  }
+  finally {
+    adding.value = false
+  }
+}
+
 const PERMISSION_LABELS: Record<Permission, string> = {
   viewAllEntries: '全申請の閲覧（台帳）',
   viewBureauEntries: '担当局の申請の閲覧',
@@ -54,13 +90,39 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   importBudget: '予算の取り込み',
   manageUsers: 'ユーザーの権限変更',
 }
-const formatDate = (d: string | Date) => new Date(d).toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' })
+const formatDate = (d: string | Date | null) => (d ? new Date(d).toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' }) : '未ログイン')
 </script>
 
 <template>
   <section>
     <h1>ユーザーと権限</h1>
-    <p class="hint">ログインしたことのある人が一覧に出ます（初回は「一般委員」）。権限の変更は、その人の次の操作から反映されます。</p>
+    <p class="hint">
+      委員をメールアドレスで先に登録して権限を付けておけます。登録していない人も、初回ログインで「一般委員」として一覧に加わります。
+      権限の変更は、その人の次の操作から反映されます。
+    </p>
+
+    <form class="card add" @submit.prevent="add">
+      <h2>委員を追加</h2>
+      <div class="add-fields">
+        <label>メールアドレス<input v-model.trim="newUser.email" type="email" placeholder="xxxx@g.ecc.u-tokyo.ac.jp" required></label>
+        <label>氏名（任意）<input v-model.trim="newUser.name" placeholder="初回ログイン時に更新されます"></label>
+        <label>権限
+          <select v-model="newUser.role">
+            <option v-for="r in ROLES" :key="r" :value="r">{{ ROLE_LABELS[r] }}</option>
+          </select>
+        </label>
+        <label v-if="newUser.role === 'bureau_head'">担当局
+          <select v-if="bureaus.length" v-model="newUser.bureau" required>
+            <option value="" disabled>選んでください</option>
+            <option v-for="b in bureaus" :key="b" :value="b">{{ b }}</option>
+          </select>
+          <input v-else v-model="newUser.bureau" placeholder="財務局" required>
+        </label>
+      </div>
+      <ul v-if="addErrors.length" class="error"><li v-for="e in addErrors" :key="e">{{ e }}</li></ul>
+      <p v-if="added" class="ok">{{ added }}</p>
+      <button type="submit" :disabled="adding">{{ adding ? '追加中…' : '追加' }}</button>
+    </form>
 
     <details class="card perms">
       <summary>権限ごとにできること</summary>
@@ -114,6 +176,13 @@ const formatDate = (d: string | Date) => new Date(d).toLocaleString('ja-JP', { d
               <button v-if="changed(u)" :disabled="saving === u.email" @click="save(u.email)">
                 {{ saving === u.email ? '保存中…' : '保存' }}
               </button>
+              <button
+                v-if="u.email !== me?.email && !u.bootstrapAdmin"
+                class="secondary"
+                @click="remove(u)"
+              >
+                削除
+              </button>
               <span v-if="messages[u.email]" :class="messages[u.email]!.ok ? 'ok' : 'error'">{{ messages[u.email]!.text }}</span>
             </td>
           </tr>
@@ -133,4 +202,8 @@ const formatDate = (d: string | Date) => new Date(d).toLocaleString('ja-JP', { d
 td select, td input { min-width: 9rem; }
 .ok { color: var(--done); margin-left: .5rem; }
 .error { margin-left: .5rem; }
+.add { max-width: none; margin-bottom: 1.5rem; }
+.add h2 { font-size: 1rem; margin: 0; }
+.add-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .75rem; }
+td button + button { margin-left: .5rem; }
 </style>

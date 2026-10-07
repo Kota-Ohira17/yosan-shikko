@@ -4,5 +4,5 @@ import { asc } from 'drizzle-orm'
 export default defineEventHandler(async (event) => {
   await requirePermission(event, 'manageUsers')
   const users = await useDb().select().from(schema.users).orderBy(asc(schema.users.email))
-  return users.map(u => ({ ...u, bootstrapAdmin: isBootstrapAdmin(u.email) }))
+  return users.map(toUserView)
 })
