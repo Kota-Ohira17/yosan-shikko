@@ -90,7 +90,7 @@ const formatDate = (d: string | Date | null) => (d ? new Date(d).toLocaleString(
   <section>
     <h1>ユーザーと権限</h1>
     <p class="hint">
-      財務局長だけが台帳・口座情報・対応済み操作・予算の取り込み・この画面を使えます。それ以外の人は「一般」です。
+      財務局長と管理者は、台帳・口座情報・対応済み操作・予算の取り込み・この画面を使えます（できることは同じです）。それ以外の人は「一般」です。
       委員をメールアドレスで先に登録しておくこともでき、登録していない人も初回ログインで「一般」として一覧に加わります。
     </p>
 
@@ -146,7 +146,7 @@ const formatDate = (d: string | Date | null) => (d ? new Date(d).toLocaleString(
               <select v-model="drafts[u.email]" :disabled="u.bootstrapAdmin">
                 <option v-for="r in ROLES" :key="r" :value="r">{{ ROLE_LABELS[r] }}</option>
               </select>
-              <small v-if="u.bootstrapAdmin" class="hint">環境変数で財務局長に固定</small>
+              <small v-if="u.bootstrapAdmin" class="hint">環境変数で管理者に固定</small>
             </td>
             <td class="nowrap">{{ formatDate(u.lastLoginAt) }}</td>
             <td class="nowrap">

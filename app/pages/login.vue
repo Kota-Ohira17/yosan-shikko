@@ -35,7 +35,7 @@ async function loginDev() {
 
     <form v-if="devLogin" class="dev" @submit.prevent="loginDev">
       <h2>開発用ログイン</h2>
-      <p class="hint">パスワードは不要です。初回は「一般」で登録されます（NUXT_ADMIN_EMAILS に含まれるメールは財務局長）。</p>
+      <p class="hint">パスワードは不要です。初回は「一般」で登録されます（NUXT_ADMIN_EMAILS に含まれるメールは管理者）。</p>
       <label>メール<input v-model.trim="dev.email" type="email" placeholder="kaikei@g.ecc.u-tokyo.ac.jp" required></label>
       <label>氏名<input v-model.trim="dev.name" placeholder="会計テスト" required></label>
       <ul v-if="devErrors.length" class="error"><li v-for="e in devErrors" :key="e">{{ e }}</li></ul>

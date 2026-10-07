@@ -26,7 +26,7 @@ const entriesDescription = computed(() =>
     </NuxtLink>
     <NuxtLink v-if="can('manageUsers')" to="/users" class="tile">
       <h2>ユーザー</h2>
-      <p>委員の登録と権限（一般・財務局長）の変更</p>
+      <p>委員の登録と権限（一般・財務局長・管理者）の変更</p>
     </NuxtLink>
   </section>
 </template>

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { can, type Permission } from '../../shared/roles'
 import type { User } from '../db/schema'
 
-/** 環境変数 NUXT_ADMIN_EMAILS のユーザー。ログインのたびに財務局長になる（最初の財務局長を作るため） */
+/** 環境変数 NUXT_ADMIN_EMAILS のユーザー。ログインのたびに管理者になる（最初の管理者を作るため） */
 export function isBootstrapAdmin(email: string) {
   const { adminEmails } = useRuntimeConfig()
   return adminEmails

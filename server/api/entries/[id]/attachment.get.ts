@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-/** 添付ファイル（請求書・証憑）。申請者本人と財務局長のみ */
+/** 添付ファイル（請求書・証憑）。申請者本人と財務局長・管理者のみ */
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
   const id = Number(getRouterParam(event, 'id'))
