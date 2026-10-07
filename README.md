@@ -68,20 +68,28 @@ Google OAuth を用意していない場合は `.env` で `NUXT_PUBLIC_DEV_LOGIN
 ## Vercel + Turso へのデプロイ
 
 1. **Turso** でデータベースを作り、URL（`libsql://…`）とトークンを用意する
-2. **Google Cloud Console** で OAuth クライアント（ウェブアプリケーション）を作る
-   - 承認済みのリダイレクト URI: `https://<Vercelのドメイン>/auth/google`
-3. **Vercel** で GitHub リポジトリをインポートし、環境変数を設定する
+2. **Vercel** で GitHub リポジトリをインポートし、環境変数を設定する
 
    | 変数 | 値 |
    | --- | --- |
    | `NUXT_SESSION_PASSWORD` | 32文字以上のランダム文字列 |
    | `NUXT_DATABASE_URL` / `NUXT_DATABASE_AUTH_TOKEN` | Turso の URL / トークン |
-   | `NUXT_OAUTH_GOOGLE_CLIENT_ID` / `NUXT_OAUTH_GOOGLE_CLIENT_SECRET` | Google OAuth |
-   | `NUXT_ADMIN_EMAILS` | 会計担当のメール（カンマ区切り） |
+   | `NUXT_ADMIN_EMAILS` | 最初の管理者のメール（カンマ区切り） |
    | `NUXT_N8N_WEBHOOK_URL` / `NUXT_N8N_WEBHOOK_SECRET` | 任意 |
 
-   `NUXT_PUBLIC_DEV_LOGIN` は**設定しない**こと。
-4. デプロイ。ビルド時に `drizzle-kit migrate` が Turso にテーブルを作る（`vercel.json` → `npm run build:vercel`）
+   ログイン方法はどちらか（または両方）を設定する。
+
+   | ログイン方法 | 変数 |
+   | --- | --- |
+   | テスト用（ECC メール＋合言葉） | `NUXT_PUBLIC_TEST_LOGIN=true`、`NUXT_TEST_LOGIN_CODE`（テスター用）、`NUXT_TEST_ADMIN_CODE`（管理者用）、`NUXT_PUBLIC_ENV_LABEL=テスト環境` |
+   | Google（ECC アカウント） | `NUXT_PUBLIC_GOOGLE_LOGIN=true`、`NUXT_OAUTH_GOOGLE_CLIENT_ID` / `NUXT_OAUTH_GOOGLE_CLIENT_SECRET`（リダイレクト URI: `https://<ドメイン>/auth/google`） |
+
+   `NUXT_PUBLIC_DEV_LOGIN` は**設定しない**こと（誰でも任意のメールで入れてしまう）。
+3. デプロイ。ビルド時に `drizzle-kit migrate` が Turso にテーブルを作る（`vercel.json` → `npm run build:vercel`）
+
+### テスト用ログインの注意
+合言葉を知っている人は、他人の ECC メールでも入れます（管理者として入るには管理者用の合言葉が別に必要）。
+本人確認が必要な運用に入る前に、Google ログインか委員会のログイン制度に切り替えてください。
 
 ### 添付ファイルについて
 Vercel の関数は 4.5MB までしかリクエストを受け取れないため、添付は **4MB まで**。

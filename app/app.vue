@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { loggedIn, clear, fetch: refreshSession } = useUserSession()
 const { user, can, roleLabel, entriesTitle } = usePermissions()
+const { public: { envLabel } } = useRuntimeConfig()
 
 // 管理者が権限を変えたときに、メニューの表示も追いつくようページ移動のたびに取り直す
 const router = useRouter()
@@ -16,6 +17,9 @@ async function logout() {
 
 <template>
   <div>
+    <div v-if="envLabel" class="env-banner" role="note">
+      {{ envLabel }}：本物の口座情報や個人情報は入力しないでください
+    </div>
     <header class="header">
       <NuxtLink to="/" class="brand">予算執行</NuxtLink>
       <nav v-if="loggedIn" class="nav">

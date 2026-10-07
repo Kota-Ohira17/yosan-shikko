@@ -111,3 +111,8 @@ dd { margin: 0; word-break: break-all; }
 .items { margin-bottom: .75rem; }
 .items ul { margin: .25rem 0 0; padding-left: 1.25rem; }
 .muted { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.env-banner { background: #fff4ce; color: #5c4400; border-bottom: 1px solid #e5c76b; padding: .4rem 1rem; font-size: .85rem; text-align: center; }
+@media (prefers-color-scheme: dark) {
+  .env-banner { background: #3d3100; color: #ffe08a; border-color: #6b5600; }
+}

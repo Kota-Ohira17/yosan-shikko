@@ -1,16 +1,43 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 
-const devLoginSchema = z.object({
+const bodySchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email('メールアドレスの形式で入力してください')),
   name: z.string().trim().min(1, '氏名を入力してください'),
+  code: z.string().default(''),
 })
 
-/** ローカル開発用ログイン。NUXT_PUBLIC_DEV_LOGIN=true のときだけ有効 */
+function sameCode(input: string, expected: string) {
+  const a = createHash('sha256').update(input).digest()
+  const b = createHash('sha256').update(expected).digest()
+  return timingSafeEqual(a, b)
+}
+
+/**
+ * 開発・テスト用のログイン。
+ * - NUXT_PUBLIC_DEV_LOGIN=true: ローカル開発用。任意のメールで入れる
+ * - NUXT_PUBLIC_TEST_LOGIN=true: テスト公開用。ECC メール＋合言葉（NUXT_TEST_LOGIN_CODE）が必要。
+ *   NUXT_ADMIN_EMAILS の管理者として入るには、別の合言葉（NUXT_TEST_ADMIN_CODE）が必要
+ * 両方 true のときはテスト公開用の制限がかかる。
+ */
 export default defineEventHandler(async (event) => {
-  if (!useRuntimeConfig().public.devLogin) {
-    throw createError({ statusCode: 404 })
+  const { testLoginCode, testAdminCode, public: { devLogin, testLogin } } = useRuntimeConfig()
+  if (!devLogin && !testLogin) throw createError({ statusCode: 404 })
+
+  const { email, name, code } = parseOr400(bodySchema.safeParse(await readBody(event)))
+
+  if (testLogin) {
+    if (!isAllowedEmail(email)) {
+      throw createError({ statusCode: 400, message: `@${useRuntimeConfig().allowedEmailDomain} のメールアドレスで入ってください` })
+    }
+    const expected = isBootstrapAdmin(email) ? testAdminCode : testLoginCode
+    // 合言葉が未設定のまま公開されても、誰も入れないようにする
+    if (!expected || !sameCode(code, expected)) {
+      await new Promise(r => setTimeout(r, 1000)) // 総当たりを遅らせる
+      throw createError({ statusCode: 401, message: '合言葉が違います' })
+    }
   }
-  const { email, name } = parseOr400(devLoginSchema.safeParse(await readBody(event)))
+
   await loginAs(event, email, name)
   return { ok: true }
 })
