@@ -1,5 +1,6 @@
 import { blob, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { PAYMENT_TYPES } from '../../shared/constants'
+import { ROLES } from '../../shared/roles'
 
 /**
  * 添付ファイル（請求書・証憑）。サーバーレス環境（Vercel）ではディスクに保存できないので DB に持つ。
@@ -100,3 +101,19 @@ export const entryItems = sqliteTable('entry_items', {
 
 export type BudgetLine = typeof budgetLines.$inferSelect
 export type EntryItem = typeof entryItems.$inferSelect
+
+/**
+ * ログインしたことのあるユーザーと権限。初回ログイン時に「一般委員」で作られ、管理者が画面で変える。
+ * 環境変数 NUXT_ADMIN_EMAILS のユーザーはログインのたびに管理者に戻る（最初の管理者を作るため）。
+ */
+export const users = sqliteTable('users', {
+  email: text('email').primaryKey(),
+  name: text('name').notNull(),
+  role: text('role', { enum: ROLES }).notNull().default('member'),
+  /** 局長の担当局。申請の「局」と一致する申請を閲覧できる */
+  bureau: text('bureau').notNull().default(''),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  lastLoginAt: integer('last_login_at', { mode: 'timestamp_ms' }).notNull(),
+})
+
+export type User = typeof users.$inferSelect

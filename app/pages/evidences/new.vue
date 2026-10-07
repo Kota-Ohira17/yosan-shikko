@@ -16,6 +16,7 @@ const form = reactive({
   refundTiming: '委員返金と同時',
 })
 const file = ref<File | null>(null)
+useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
 const done = ref<string>()
 
 async function onSubmit() {
@@ -36,7 +37,7 @@ async function onSubmit() {
     <form v-else @submit.prevent="onSubmit">
       <label>提出者（立替者）氏名<input v-model="form.advancedName" required></label>
       <div class="row">
-        <label>局<input v-model="form.department" required></label>
+        <BureauField v-model="form.department" />
         <label>担当名<input v-model="form.inCharge" required></label>
       </div>
       <fieldset>

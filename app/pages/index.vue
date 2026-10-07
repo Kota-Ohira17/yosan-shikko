@@ -1,5 +1,11 @@
 <script setup lang="ts">
-const { user } = useUserSession()
+const { can, entriesTitle } = usePermissions()
+
+const entriesDescription = computed(() => {
+  if (can('executeEntries')) return '番号順・申請順・形態別の一覧と対応済み処理'
+  if (can('viewBureauEntries')) return '自分と担当局の申請と対応状況'
+  return '申請した内容と対応状況'
+})
 </script>
 
 <template>
@@ -13,8 +19,16 @@ const { user } = useUserSession()
       <p>立替後の領収書・レシートの提出</p>
     </NuxtLink>
     <NuxtLink to="/entries" class="tile">
-      <h2>{{ user?.isAdmin ? '台帳' : '自分の申請' }}</h2>
-      <p>{{ user?.isAdmin ? '番号順・申請順・形態別の一覧と対応済み処理' : '申請した内容と対応状況' }}</p>
+      <h2>{{ entriesTitle }}</h2>
+      <p>{{ entriesDescription }}</p>
+    </NuxtLink>
+    <NuxtLink v-if="can('importBudget')" to="/budget" class="tile">
+      <h2>予算</h2>
+      <p>本予算スプレッドシートの取り込みと明細の確認</p>
+    </NuxtLink>
+    <NuxtLink v-if="can('manageUsers')" to="/users" class="tile">
+      <h2>ユーザー</h2>
+      <p>権限（一般委員・局長・会計担当・管理者）の変更</p>
     </NuxtLink>
   </section>
 </template>

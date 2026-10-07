@@ -62,9 +62,9 @@ function withoutBank(details: Record<string, unknown>) {
   return rest
 }
 
-/** 会計担当以外には口座情報を返さない */
-export function toPublicEntry<T extends Entry>(entry: T, isAdmin: boolean): T {
-  return isAdmin ? entry : { ...entry, details: withoutBank(entry.details) }
+/** 口座情報を見る権限がない人には返さない */
+export function toPublicEntry<T extends Entry>(entry: T, showBank: boolean): T {
+  return showBank ? entry : { ...entry, details: withoutBank(entry.details) }
 }
 
 /** n8n/Slack に渡す内容。口座情報は常に除外する */

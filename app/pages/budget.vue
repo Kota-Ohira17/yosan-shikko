@@ -1,6 +1,6 @@
 <script setup lang="ts">
-const { user } = useUserSession()
-if (!user.value?.isAdmin) await navigateTo('/')
+const { can } = usePermissions()
+if (!can('importBudget')) await navigateTo('/')
 
 const { data: lines, refresh } = await useBudgetLines()
 const file = ref<File | null>(null)

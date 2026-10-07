@@ -30,6 +30,7 @@ const form = reactive({
   details: '',
 })
 const file = ref<File | null>(null)
+useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
 const confirmed = ref(false)
 const done = ref<string>()
 
@@ -81,7 +82,7 @@ async function onSubmit() {
         <legend>共通</legend>
         <label>申請者氏名<input v-model="form.applicantName" required></label>
         <div class="row">
-          <label>局<input v-model="form.department" placeholder="ZAI" required></label>
+          <BureauField v-model="form.department" />
           <label>担当名<input v-model="form.inCharge" placeholder="logi" required></label>
         </div>
         <label>補正予算からの変更

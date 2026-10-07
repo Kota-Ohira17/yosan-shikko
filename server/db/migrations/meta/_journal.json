@@ -22,6 +22,13 @@
       "when": 1791375714443,
       "tag": "0002_budget_hierarchy",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791384136563,
+      "tag": "0003_users",
+      "breakpoints": true
     }
   ]
 }

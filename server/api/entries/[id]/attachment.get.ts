@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm'
 
-/** 添付ファイル（請求書・証憑）。会計担当か申請者本人のみ */
+/** 添付ファイル（請求書・証憑）。その申請を見られる人（本人・担当局の局長・会計担当・管理者）のみ */
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
   const id = Number(getRouterParam(event, 'id'))
   const db = useDb()
   const entry = await db.query.entries.findFirst({ where: eq(schema.entries.id, id) })
-  if (!entry?.attachmentId || (!user.isAdmin && entry.applicantEmail !== user.email)) {
+  if (!entry?.attachmentId || !canSeeEntry(user, entry)) {
     throw createError({ statusCode: 404 })
   }
 

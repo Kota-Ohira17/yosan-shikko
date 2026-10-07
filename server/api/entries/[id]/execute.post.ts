@@ -17,7 +17,7 @@ function paymentMethodFor(entry: Entry, bank?: string) {
  * 1行しか持たないので、旧GASのようにタイムスタンプで他シートの行を探して同期する必要はない。
  */
 export default defineEventHandler(async (event) => {
-  const user = await requireAdmin(event)
+  const user = await requirePermission(event, 'executeEntries')
   const id = Number(getRouterParam(event, 'id'))
   const body = parseOr400(executeSchema.safeParse(await readBody(event)))
   const db = useDb()

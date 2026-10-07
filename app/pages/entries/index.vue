@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { TRANSFER_BANKS, VIEWS, type ViewKey } from '#shared/constants'
 
-const { user } = useUserSession()
+const { can, entriesTitle } = usePermissions()
 const route = useRoute()
 const router = useRouter()
 
@@ -72,7 +72,7 @@ async function setDone(row: Row, done: boolean) {
 
 <template>
   <section>
-    <h1>{{ user?.isAdmin ? '台帳' : '自分の申請' }}</h1>
+    <h1>{{ entriesTitle }}</h1>
 
     <nav class="tabs">
       <button
@@ -137,7 +137,7 @@ async function setDone(row: Row, done: boolean) {
                   </template>
                 </dl>
 
-                <div v-if="user?.isAdmin" class="exec">
+                <div v-if="can('executeEntries')" class="exec">
                   <template v-if="row.status === 'pending'">
                     <label v-if="row.kind === 'execution' && row.type === '振込'">使用口座
                       <select v-model="exec.bank"><option v-for="b in TRANSFER_BANKS" :key="b">{{ b }}</option></select>

@@ -3,7 +3,7 @@
  * 申請側は明細の内容をコピーして持っているので、入れ替えても過去の申請は変わらない。
  */
 export default defineEventHandler(async (event) => {
-  await requireAdmin(event)
+  await requirePermission(event, 'importBudget')
   const parts = (await readMultipartFormData(event)) ?? []
   const file = parts.find(p => p.name === 'file' && p.data.length > 0)
   if (!file) throw createError({ statusCode: 400, message: 'CSV ファイルを選んでください' })

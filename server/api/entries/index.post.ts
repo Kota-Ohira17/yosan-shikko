@@ -1,3 +1,4 @@
+import { can } from '../../../shared/roles'
 import { executionRequestSchema } from '../../../shared/schemas'
 
 /** 執行依頼（旧「執行依頼」フォーム） */
@@ -38,5 +39,5 @@ export default defineEventHandler(async (event) => {
 
   await notifyN8n('created', entry)
   setResponseStatus(event, 201)
-  return toPublicEntry(entry, user.isAdmin)
+  return toPublicEntry(entry, can(user.role, 'viewBankAccount'))
 })
