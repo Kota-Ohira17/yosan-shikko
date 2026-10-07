@@ -4,10 +4,23 @@ const { public: { devLogin } } = useRuntimeConfig()
 const { fetch: refreshSession } = useUserSession()
 
 const dev = reactive({ email: '', name: '' })
+const devErrors = ref<string[]>([])
+const pending = ref(false)
+
 async function loginDev() {
-  await $fetch('/auth/dev', { method: 'POST', body: dev })
-  await refreshSession()
-  await navigateTo('/')
+  devErrors.value = []
+  pending.value = true
+  try {
+    await $fetch('/auth/dev', { method: 'POST', body: dev })
+    await refreshSession()
+    await navigateTo('/')
+  }
+  catch (error) {
+    devErrors.value = toMessages(error)
+  }
+  finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -15,14 +28,18 @@ async function loginDev() {
   <section class="card narrow">
     <h1>ログイン</h1>
     <p>ECCアカウント（g.ecc.u-tokyo.ac.jp）でログインしてください。</p>
-    <p v-if="route.query.error" class="error">ログインに失敗しました。</p>
+    <p v-if="route.query.error" class="error">
+      Google ログインに失敗しました。<template v-if="devLogin">ローカルでは Google ログインは未設定なので、下の「開発用ログイン」を使ってください。</template>
+    </p>
     <a href="/auth/google" class="button">Google でログイン</a>
 
     <form v-if="devLogin" class="dev" @submit.prevent="loginDev">
       <h2>開発用ログイン</h2>
-      <label>メール<input v-model="dev.email" type="email" required></label>
-      <label>氏名<input v-model="dev.name" required></label>
-      <button type="submit">ログイン</button>
+      <p class="hint">パスワードは不要です。メールが NUXT_ADMIN_EMAILS に含まれていれば会計担当になります。</p>
+      <label>メール<input v-model.trim="dev.email" type="email" placeholder="kaikei@g.ecc.u-tokyo.ac.jp" required></label>
+      <label>氏名<input v-model.trim="dev.name" placeholder="会計テスト" required></label>
+      <ul v-if="devErrors.length" class="error"><li v-for="e in devErrors" :key="e">{{ e }}</li></ul>
+      <button type="submit" :disabled="pending">{{ pending ? 'ログイン中…' : 'ログイン' }}</button>
     </form>
   </section>
 </template>
