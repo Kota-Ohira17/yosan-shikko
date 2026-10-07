@@ -11,7 +11,7 @@
 | 証憑管理フォーム → `onFormSubmit`（`e.values[11][0] == "h"` で判定） | `/evidences/new` → `POST /api/evidences`（エンドポイントを分離） |
 | 形態別シート・番号順・申請順に**同じ行をコピー** | `entries` テーブル1つ。一覧は `/entries?view=number\|time\|振込\|…` で切り替え |
 | A列チェック → `onChange` がタイムスタンプで他シートの行を探して書き戻し | 「対応済みにする」ボタン → `POST /api/entries/:id/execute`（行は1つなので同期不要） |
-| `folderTable`（Drive フォルダIDのハードコード） | 項目番号（`out-03-02` 単位）のフォルダを自動作成して保存 |
+| `folderTable`（Drive フォルダIDのハードコード） | 添付ファイルは DB（`attachments` テーブル）に保存。フォルダ管理は不要 |
 | `ScriptProperties` の連番（ロックなし） | `counters` テーブルを `INSERT … ON CONFLICT DO UPDATE` で原子的に採番 |
 | n8n Webhook（口座情報も送信） | n8n Webhook（**口座情報は除外**、`X-Webhook-Secret` ヘッダ付き） |
 | `e.values[n]`（列番号依存） | zod スキーマで設問名ベースに検証 |
@@ -41,13 +41,33 @@ Google OAuth を用意していない場合は `.env` で `NUXT_PUBLIC_DEV_LOGIN
 ログイン画面に任意のメールでログインできるフォームが出ます（**本番では絶対に有効にしない**）。
 `NUXT_ADMIN_EMAILS` に入れたメールでログインすると会計担当として扱われます。
 
-DB は初回起動時に `server/db/migrations` から自動で作成されます（既定は `.data/app.db`）。
+ローカルの DB（`file:` の SQLite）は初回起動時に `server/db/migrations` から自動で作成されます（既定は `.data/app.db`）。
 スキーマを変えたら `npm run db:generate` でマイグレーションを追加してください。
 
+## Vercel + Turso へのデプロイ
+
+1. **Turso** でデータベースを作り、URL（`libsql://…`）とトークンを用意する
+2. **Google Cloud Console** で OAuth クライアント（ウェブアプリケーション）を作る
+   - 承認済みのリダイレクト URI: `https://<Vercelのドメイン>/auth/google`
+3. **Vercel** で GitHub リポジトリをインポートし、環境変数を設定する
+
+   | 変数 | 値 |
+   | --- | --- |
+   | `NUXT_SESSION_PASSWORD` | 32文字以上のランダム文字列 |
+   | `NUXT_DATABASE_URL` / `NUXT_DATABASE_AUTH_TOKEN` | Turso の URL / トークン |
+   | `NUXT_OAUTH_GOOGLE_CLIENT_ID` / `NUXT_OAUTH_GOOGLE_CLIENT_SECRET` | Google OAuth |
+   | `NUXT_ADMIN_EMAILS` | 会計担当のメール（カンマ区切り） |
+   | `NUXT_N8N_WEBHOOK_URL` / `NUXT_N8N_WEBHOOK_SECRET` | 任意 |
+
+   `NUXT_PUBLIC_DEV_LOGIN` は**設定しない**こと。
+4. デプロイ。ビルド時に `drizzle-kit migrate` が Turso にテーブルを作る（`vercel.json` → `npm run build:vercel`）
+
+### 添付ファイルについて
+Vercel の関数は 4.5MB までしかリクエストを受け取れないため、添付は **4MB まで**。
+スマホ写真は送信前にブラウザで長辺 2000px の JPEG に縮小しています（`app/composables/useSubmit.ts`）。
+ファイルは Turso の `attachments` テーブルに入ります（無料枠 5GB。領収書なら数千枚は入る）。
+
 ## 本番に向けて残っていること
-- **ファイル保存先**: 今はサーバーのローカルディスク（`.data/uploads`）。永続ディスクのないホスティング（Vercel など）では
-  Google Drive API か S3 互換ストレージに差し替える必要があります（`server/utils/upload.ts` だけ変えれば済む構成）
-- **DB**: ローカルは SQLite。本番は `NUXT_DATABASE_URL` に Turso（libsql）の URL を入れればそのまま動きます
 - **既存データの移行**: スプレッドシートの「執行依頼」「証憑管理」シートから `entries` への取り込みスクリプト
 - **n8n 側**: 受け取る JSON の形が変わる（`{ event, entry }`）ので Slack 投稿ワークフローの修正が必要
 - Nuxt は 4.5 系に固定しています（4.6.0 は Windows でビルドすると SSR の precomputed が空になり 500 になるため）

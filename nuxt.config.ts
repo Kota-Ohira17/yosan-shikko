@@ -9,7 +9,6 @@ export default defineNuxtConfig({
     // 環境変数 NUXT_DATABASE_URL などで上書きする（.env.example 参照）
     databaseUrl: 'file:.data/app.db',
     databaseAuthToken: '',
-    uploadDir: '.data/uploads',
     adminEmails: '',
     allowedEmailDomain: 'g.ecc.u-tokyo.ac.jp',
     n8nWebhookUrl: '',

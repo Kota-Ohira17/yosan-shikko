@@ -24,6 +24,6 @@ export function toPublicEntry(entry: Entry, isAdmin: boolean) {
 
 /** n8n/Slack に渡す内容。口座情報は常に除外する */
 export function toNotification(entry: Entry) {
-  const { applicantEmail: _email, attachmentPath, executedBy: _by, ...rest } = entry
-  return { ...rest, details: withoutBank(entry.details), hasAttachment: Boolean(attachmentPath) }
+  const { applicantEmail: _email, attachmentId, executedBy: _by, ...rest } = entry
+  return { ...rest, details: withoutBank(entry.details), hasAttachment: Boolean(attachmentId) }
 }

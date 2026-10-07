@@ -1,3 +1,5 @@
+import { MAX_ATTACHMENT_BYTES } from '#shared/constants'
+
 /** payload（JSON）と添付ファイルを multipart で送る。エラーはメッセージの配列にする */
 export function useSubmit<T>(url: string) {
   const errors = ref<string[]>([])
@@ -6,10 +8,17 @@ export function useSubmit<T>(url: string) {
   async function submit(payload: unknown, file?: File | null): Promise<T | undefined> {
     errors.value = []
     pending.value = true
-    const form = new FormData()
-    form.append('payload', JSON.stringify(payload))
-    if (file) form.append('attachment', file)
     try {
+      const form = new FormData()
+      form.append('payload', JSON.stringify(payload))
+      if (file) {
+        const prepared = await shrinkImage(file)
+        if (prepared.size > MAX_ATTACHMENT_BYTES) {
+          errors.value = ['添付ファイルは4MB以下にしてください（PDFは圧縮するか、ページを分けてください）']
+          return
+        }
+        form.append('attachment', prepared, prepared.name)
+      }
       return await $fetch<T>(url, { method: 'POST', body: form })
     }
     catch (error) {
@@ -21,6 +30,32 @@ export function useSubmit<T>(url: string) {
   }
 
   return { submit, errors, pending }
+}
+
+const SHRINK_THRESHOLD = 1.5 * 1024 * 1024
+const MAX_EDGE = 2000
+
+/**
+ * スマホ写真はそのままだと 4MB を超えやすいので、長辺 2000px の JPEG に縮小する。
+ * ブラウザが読めない形式（Chrome での HEIC など）はそのまま返す。
+ */
+async function shrinkImage(file: File): Promise<File> {
+  if (!/^image\/(jpeg|png|webp|heic)$/.test(file.type) || file.size <= SHRINK_THRESHOLD) return file
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85))
+    if (!blob || blob.size >= file.size) return file
+    return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' })
+  }
+  catch {
+    return file
+  }
 }
 
 export function toMessages(error: unknown): string[] {

@@ -8,7 +8,9 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "db:generate": "drizzle-kit generate",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "build:vercel": "drizzle-kit migrate && nuxt build",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
@@ -21,5 +23,8 @@
     "drizzle-kit": "^0.31.11",
     "typescript": "~5.9",
     "vue-tsc": "^3.3.12"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

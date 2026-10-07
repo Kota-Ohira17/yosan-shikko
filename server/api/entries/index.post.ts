@@ -12,8 +12,8 @@ export default defineEventHandler(async (event) => {
   } = input
   const { amount, quantity, ...details } = rest as typeof rest & { amount?: number, quantity?: string }
 
-  const attachmentPath = file
-    ? await saveAttachment(file, itemNumber, `${inCharge}_${itemName}_請求書`)
+  const attachmentId = file
+    ? await saveAttachment(file, `${inCharge}_${itemName}_請求書`)
     : null
 
   const [entry] = await useDb()
@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
       deadline,
       remark,
       details,
-      attachmentPath,
+      attachmentId,
     })
     .returning()
 

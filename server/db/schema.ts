@@ -1,5 +1,18 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { blob, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { PAYMENT_TYPES } from '../../shared/constants'
+
+/**
+ * 添付ファイル（請求書・証憑）。サーバーレス環境（Vercel）ではディスクに保存できないので DB に持つ。
+ * 旧GASの folderTable（Drive フォルダIDのハードコード）は不要になり、項目番号で検索できる。
+ */
+export const attachments = sqliteTable('attachments', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  fileName: text('file_name').notNull(),
+  contentType: text('content_type').notNull(),
+  size: integer('size').notNull(),
+  data: blob('data', { mode: 'buffer' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+})
 
 /**
  * 執行依頼と証憑提出をまとめて1テーブルで持つ。
@@ -27,7 +40,7 @@ export const entries = sqliteTable('entries', {
   remark: text('remark').notNull().default(''),
   /** 形態ごとの追加項目。口座情報は details.bank に入り、会計担当以外には返さない */
   details: text('details', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
-  attachmentPath: text('attachment_path'),
+  attachmentId: integer('attachment_id').references(() => attachments.id),
   /** 執行時に確定する執行形態（振込（SMBC）/ 口座引落 / 立替 など） */
   paymentMethod: text('payment_method'),
   executedAt: integer('executed_at', { mode: 'timestamp_ms' }),

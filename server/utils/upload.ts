@@ -1,8 +1,7 @@
-import { mkdir, writeFile } from 'node:fs/promises'
-import { extname, join } from 'node:path'
+import { extname } from 'node:path'
 import type { H3Event } from 'h3'
+import { MAX_ATTACHMENT_BYTES } from '../../shared/constants'
 
-const MAX_BYTES = 20 * 1024 * 1024
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/webp']
 
 type Part = NonNullable<Awaited<ReturnType<typeof readMultipartFormData>>>[number]
@@ -21,8 +20,8 @@ export async function readPayloadAndFile(event: H3Event) {
   }
   const file = parts.find(p => p.name === 'attachment' && p.filename && p.data.length > 0)
   if (file) {
-    if (file.data.length > MAX_BYTES) {
-      throw createError({ statusCode: 400, message: 'ファイルは20MB以下にしてください' })
+    if (file.data.length > MAX_ATTACHMENT_BYTES) {
+      throw createError({ statusCode: 400, message: 'ファイルは4MB以下にしてください' })
     }
     if (!file.type || !ALLOWED_TYPES.includes(file.type)) {
       throw createError({ statusCode: 400, message: 'PDF または画像ファイルを添付してください' })
@@ -31,18 +30,20 @@ export async function readPayloadAndFile(event: H3Event) {
   return { payload, file }
 }
 
-/**
- * 項目番号ごとのフォルダに保存する。
- * 旧GASの folderTable（Drive フォルダIDのハードコード）の置き換えで、フォルダは自動で作られる。
- */
-export async function saveAttachment(file: Part, itemNumber: string, label: string) {
-  const { uploadDir } = useRuntimeConfig()
-  const folder = itemNumber.slice(0, 9) // out-03-02 単位（旧GASと同じ）
+/** 添付ファイルを DB に保存し、ID を返す。ファイル名は旧GASと同じく「担当 項目名 種類」にする */
+export async function saveAttachment(file: Part, label: string) {
   const safeLabel = label.replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 80)
-  const fileName = `${Date.now()}_${safeLabel}${extname(file.filename ?? '').toLowerCase()}`
-  await mkdir(join(uploadDir, folder), { recursive: true })
-  await writeFile(join(uploadDir, folder, fileName), file.data)
-  return `${folder}/${fileName}`
+  const [row] = await useDb()
+    .insert(schema.attachments)
+    .values({
+      fileName: `${safeLabel}${extname(file.filename ?? '').toLowerCase()}`,
+      contentType: file.type!,
+      size: file.data.length,
+      data: file.data,
+      createdAt: new Date(),
+    })
+    .returning({ id: schema.attachments.id })
+  return row!.id
 }
 
 /** zod のエラーを 400 にする */

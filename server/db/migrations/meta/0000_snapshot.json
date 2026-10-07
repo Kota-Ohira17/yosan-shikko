@@ -1,9 +1,61 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e5c2eea6-7718-40e3-8a3b-5c4bf262e014",
+  "id": "03ae3d8a-ac74-494f-908a-b3ff6dcbf0af",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "attachments": {
+      "name": "attachments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "file_name": {
+          "name": "file_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "size": {
+          "name": "size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "data": {
+          "name": "data",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "counters": {
       "name": "counters",
       "columns": {
@@ -153,9 +205,9 @@
           "autoincrement": false,
           "default": "'{}'"
         },
-        "attachment_path": {
-          "name": "attachment_path",
-          "type": "text",
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -191,7 +243,21 @@
           "isUnique": true
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "entries_attachment_id_attachments_id_fk": {
+          "name": "entries_attachment_id_attachments_id_fk",
+          "tableFrom": "entries",
+          "tableTo": "attachments",
+          "columnsFrom": [
+            "attachment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

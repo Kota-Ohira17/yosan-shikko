@@ -122,7 +122,7 @@ async function setDone(row: Row, done: boolean) {
                     </dd>
                   </template>
                   <template v-if="row.remark"><dt>備考</dt><dd>{{ row.remark }}</dd></template>
-                  <template v-if="row.attachmentPath">
+                  <template v-if="row.attachmentId">
                     <dt>添付</dt>
                     <dd><a :href="`/api/entries/${row.id}/attachment`" target="_blank">ファイルを開く</a></dd>
                   </template>

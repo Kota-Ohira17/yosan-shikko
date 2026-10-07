@@ -9,11 +9,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: '証憑ファイルを添付してください' })
   }
 
-  const attachmentPath = await saveAttachment(
-    file,
-    input.itemNumber,
-    `${input.inCharge}_${input.itemName}_${input.kindOfEvidence}`,
-  )
+  const attachmentId = await saveAttachment(file, `${input.inCharge}_${input.itemName}_${input.kindOfEvidence}`)
 
   const [entry] = await useDb()
     .insert(schema.entries)
@@ -32,7 +28,7 @@ export default defineEventHandler(async (event) => {
       quantity: input.quantity,
       deadline: input.payDate,
       details: { kindOfEvidence: input.kindOfEvidence, refundTiming: input.refundTiming },
-      attachmentPath,
+      attachmentId,
       // 旧GASでは証憑提出時点で執行形態「立替」・執行日=立替日として記録していた
       paymentMethod: '立替',
     })

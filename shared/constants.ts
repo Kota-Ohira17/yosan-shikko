@@ -3,6 +3,9 @@ export type PaymentType = (typeof PAYMENT_TYPES)[number]
 
 export const TRANSFER_BANKS = ['SMBC', 'ゆうちょ'] as const
 
+/** Vercel の関数は 4.5MB までしか受け取れないので、それより少し小さくする */
+export const MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024
+
 /** 一覧画面のビュー。旧スプレッドシートのシートに対応する */
 export const VIEWS = {
   number: '番号順',
