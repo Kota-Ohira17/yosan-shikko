@@ -37,7 +37,7 @@ const query = ref('')
 const filtered = computed(() => {
   const words = query.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
   return lines.value.filter((l) => {
-    const text = `${l.itemNumber} ${l.bureau} ${l.team} ${l.label} ${l.vendor}`.toLowerCase()
+    const text = `${l.itemNumber} ${l.bureau} ${l.team} ${l.kan} ${l.label} ${l.vendor}`.toLowerCase()
     return words.every(w => text.includes(w))
   })
 })
@@ -70,24 +70,7 @@ const filtered = computed(() => {
     <template v-if="lines.length">
       <h2>明細一覧</h2>
       <input v-model="query" type="search" class="search" placeholder="絞り込み（項目番号・局・担当・名前・取引先）">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>項目番号</th><th>局</th><th>担当</th><th>名前</th><th>数量</th><th>取引先</th><th>予算額</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="l in filtered" :key="l.key">
-              <td>{{ l.itemNumber }}</td>
-              <td>{{ l.bureau }}</td>
-              <td>{{ l.team }}</td>
-              <td>{{ l.label }}</td>
-              <td>{{ l.quantity }}</td>
-              <td>{{ l.vendor }}</td>
-              <td class="num">{{ formatYen(l.budgetAmount) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <BudgetTable :lines="filtered" class="full" />
     </template>
   </section>
 </template>
@@ -97,4 +80,5 @@ const filtered = computed(() => {
 .steps { padding-left: 1.25rem; color: var(--muted); }
 h2 { font-size: 1.1rem; }
 .search { max-width: 420px; margin-bottom: .75rem; }
+.full :deep(.sheet-wrap), .full { max-height: 70vh; }
 </style>

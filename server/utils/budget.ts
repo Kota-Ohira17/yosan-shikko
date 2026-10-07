@@ -22,12 +22,24 @@ const COLUMNS = {
   remark: '備考',
 } as const
 
+/** 金額が入っていた行が、どの階層の名前を持つ行だったか（none は数量だけの行） */
+export type BudgetLevel = 'kan' | 'kou' | 'moku' | 'setsu' | 'none'
+
 export interface ParsedBudgetLine {
   key: string
   sortOrder: number
   itemNumber: string
+  bureauNo: string
   bureau: string
   team: string
+  // スプレッドシートと同じ表を組み立てるための階層（kouNo はシートに書かれている番号そのもの）
+  kanNo: string
+  kan: string
+  kouNo: string
+  kou: string
+  moku: string
+  setsu: string
+  level: BudgetLevel
   label: string
   quantity: string
   vendor: string
@@ -58,7 +70,7 @@ export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
   ) as Record<keyof typeof COLUMNS, number>
   const get = (row: string[], k: keyof typeof COLUMNS) => (col[k] >= 0 ? (row[col[k]] ?? '').trim() : '')
 
-  const ctx = { bureau: '', team: '', kanNo: '', kan: '', kouNo: '', kou: '', moku: '', setsu: '' }
+  const ctx = { bureauNo: '', bureau: '', team: '', kanNo: '', kan: '', kouNo: '', kouRawNo: '', kou: '', moku: '', setsu: '' }
   const lines: ParsedBudgetLine[] = []
   const seen = new Map<string, number>()
 
@@ -71,14 +83,16 @@ export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
     const moku = get(row, 'moku')
     const setsu = get(row, 'setsu')
 
-    if (bureau) Object.assign(ctx, { bureau, team: '', kanNo: '', kan: '', kouNo: '', kou: '', moku: '', setsu: '' })
-    if (team) Object.assign(ctx, { team, kanNo: '', kan: '', kouNo: '', kou: '', moku: '', setsu: '' })
-    if (kan) Object.assign(ctx, { kanNo: number, kan, kouNo: '', kou: '', moku: '', setsu: '' })
+    const empty = { kanNo: '', kan: '', kouNo: '', kouRawNo: '', kou: '', moku: '', setsu: '' }
+    if (bureau) Object.assign(ctx, { ...empty, bureauNo: number, bureau, team: '' })
+    if (team) Object.assign(ctx, { ...empty, team })
+    if (kan) Object.assign(ctx, { ...empty, kanNo: number, kan })
     // 項目番号のない項は款の番号を使う
-    if (kou) Object.assign(ctx, { kouNo: number || ctx.kanNo, kou, moku: '', setsu: '' })
+    if (kou) Object.assign(ctx, { kouNo: number || ctx.kanNo, kouRawNo: number, kou, moku: '', setsu: '' })
     if (moku) Object.assign(ctx, { moku, setsu: '' })
     // 目の行の「節」列に金額が入っているのは小計なので名前として扱わない
-    if (setsu && parseMoney(setsu) === null) ctx.setsu = setsu
+    const setsuName = setsu && parseMoney(setsu) === null ? setsu : ''
+    if (setsuName) ctx.setsu = setsuName
 
     const amount = parseMoney(get(row, 'amount'))
     if (amount === null) continue
@@ -87,8 +101,9 @@ export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
     if (!itemNumber) continue
     const quantity = get(row, 'quantity')
     const label = [ctx.kou || ctx.kan, ctx.moku, ctx.setsu].filter(Boolean).join(' / ')
+    const level: BudgetLevel = setsuName ? 'setsu' : moku ? 'moku' : kou ? 'kou' : kan ? 'kan' : 'none'
     // 名前の列が空で数量だけ違う行（「1パック」「3パック」など）を区別する
-    const nameless = !kan && !kou && !moku && !(setsu && parseMoney(setsu) === null)
+    const nameless = level === 'none'
 
     let key = `${itemNumber}|${label}|${nameless ? quantity : ''}`
     const dup = seen.get(key) ?? 0
@@ -99,8 +114,16 @@ export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
       key,
       sortOrder: lines.length,
       itemNumber,
+      bureauNo: ctx.bureauNo,
       bureau: ctx.bureau,
       team: ctx.team,
+      kanNo: ctx.kanNo,
+      kan: ctx.kan,
+      kouNo: ctx.kouRawNo,
+      kou: ctx.kou,
+      moku: ctx.moku,
+      setsu: ctx.setsu,
+      level,
       label: nameless && quantity ? `${label}（${quantity}）` : label,
       quantity,
       vendor: get(row, 'vendor'),

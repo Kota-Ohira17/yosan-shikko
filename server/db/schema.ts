@@ -62,8 +62,17 @@ export const budgetLines = sqliteTable('budget_lines', {
   key: text('key').primaryKey(),
   sortOrder: integer('sort_order').notNull(),
   itemNumber: text('item_number').notNull(),
+  bureauNo: text('bureau_no').notNull().default(''),
   bureau: text('bureau').notNull().default(''),
   team: text('team').notNull().default(''),
+  // スプレッドシートと同じ表を組み立てるための階層。level はこの明細の行がどの階層の名前を持っていたか
+  kanNo: text('kan_no').notNull().default(''),
+  kan: text('kan').notNull().default(''),
+  kouNo: text('kou_no').notNull().default(''),
+  kou: text('kou').notNull().default(''),
+  moku: text('moku').notNull().default(''),
+  setsu: text('setsu').notNull().default(''),
+  level: text('level', { enum: ['kan', 'kou', 'moku', 'setsu', 'none'] }).notNull().default('none'),
   /** 款 / 項 / 目 / 節 を「 / 」でつないだ表示名 */
   label: text('label').notNull(),
   quantity: text('quantity').notNull().default(''),
