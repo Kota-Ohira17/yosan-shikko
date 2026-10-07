@@ -1,0 +1,25 @@
+{
+  "name": "yosan-shikko",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "db:generate": "drizzle-kit generate",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "drizzle-orm": "^0.45.3",
+    "nuxt": "~4.5.2",
+    "nuxt-auth-utils": "^0.5.30",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.11",
+    "typescript": "~5.9",
+    "vue-tsc": "^3.3.12"
+  }
+}

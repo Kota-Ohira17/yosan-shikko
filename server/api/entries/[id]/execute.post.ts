@@ -1,0 +1,55 @@
+import { eq } from 'drizzle-orm'
+import { executeSchema } from '../../../../shared/schemas'
+import type { Entry } from '../../../db/schema'
+
+function paymentMethodFor(entry: Entry, bank?: string) {
+  if (entry.kind === 'evidence') return '立替'
+  switch (entry.type) {
+    case '振込': return `振込（${bank}）`
+    case '発注': return '口座引落'
+    case 'カード決済': return 'デビット（MUFG）'
+    default: return entry.type
+  }
+}
+
+/**
+ * 対応済みにする / 戻す（旧 onEdit.gs の置き換え）。
+ * 1行しか持たないので、旧GASのようにタイムスタンプで他シートの行を探して同期する必要はない。
+ */
+export default defineEventHandler(async (event) => {
+  const user = await requireAdmin(event)
+  const id = Number(getRouterParam(event, 'id'))
+  const body = parseOr400(executeSchema.safeParse(await readBody(event)))
+  const db = useDb()
+  const e = schema.entries
+
+  const entry = await db.query.entries.findFirst({ where: eq(e.id, id) })
+  if (!entry) throw createError({ statusCode: 404, message: '申請が見つかりません' })
+
+  if (body.done && entry.kind === 'execution' && entry.type === '振込' && !body.bank) {
+    throw createError({ statusCode: 400, message: '振込に使った口座を選んでください' })
+  }
+
+  const [updated] = await db
+    .update(e)
+    .set(body.done
+      ? {
+          status: 'done',
+          executedAt: new Date(),
+          executedBy: user.email,
+          paymentMethod: paymentMethodFor(entry, body.bank),
+          amount: body.amount ?? entry.amount,
+          quantity: body.quantity || entry.quantity,
+        }
+      : {
+          status: 'pending',
+          executedAt: null,
+          executedBy: null,
+          paymentMethod: entry.kind === 'evidence' ? '立替' : null,
+        })
+    .where(eq(e.id, id))
+    .returning()
+
+  if (body.done) await notifyN8n('executed', updated!)
+  return updated
+})
