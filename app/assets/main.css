@@ -107,3 +107,7 @@ dt { color: var(--muted); }
 dd { margin: 0; word-break: break-all; }
 .exec { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
 .exec label { width: 180px; }
+
+.items { margin-bottom: .75rem; }
+.items ul { margin: .25rem 0 0; padding-left: 1.25rem; }
+.muted { color: var(--muted); font-variant-numeric: tabular-nums; }

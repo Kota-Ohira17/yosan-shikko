@@ -8,16 +8,28 @@ const required = (label: string) => {
 const date = z.string({ error: '日付を入力してください' }).regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください')
 const yen = z.coerce.number({ error: '金額を数字で入力してください' }).int('整数で入力してください').positive('金額を入力してください')
 
-export const itemNumberSchema = z
-  .string({ error: '項目番号を入力してください' })
-  .trim()
-  .regex(/^out-\d{2}(-\d{2}){1,2}$/, '項目番号は out-03-02-06 の形式で入力してください')
+export const ITEM_NUMBER_PATTERN = /^out-\d{2}(-\d{2}){1,2}$/
+
+/**
+ * 執行項目。予算明細から選ぶ（budgetLineKeys、複数可）か、予算にない場合は項目番号を手入力する。
+ * どちらか一方が必要（checkItems で検証）。
+ */
+const items = {
+  budgetLineKeys: z.array(z.string()).max(50, '選べる明細は50件までです').default([]),
+  itemNumber: z.string().trim().default(''),
+}
+
+function checkItems(v: { budgetLineKeys: string[], itemNumber: string }, ctx: z.RefinementCtx) {
+  if (v.budgetLineKeys.length) return
+  if (!v.itemNumber) ctx.addIssue({ code: 'custom', message: '執行項目を予算から選んでください', path: ['budgetLineKeys'] })
+  else if (!ITEM_NUMBER_PATTERN.test(v.itemNumber)) ctx.addIssue({ code: 'custom', message: '項目番号は out-03-02-06 の形式で入力してください', path: ['itemNumber'] })
+}
 
 const base = z.object({
   applicantName: required('申請者氏名'),
   department: required('局'),
   inCharge: required('担当名'),
-  itemNumber: itemNumberSchema,
+  ...items,
   itemName: required('支出項目名'),
   budgetChange: z.enum(['変動なし', '増額', '減額'], { error: '補正予算からの変更を選んでください' }),
   remark: z.string().trim().default(''),
@@ -59,21 +71,21 @@ export const executionRequestSchema = z.discriminatedUnion('type', [
     deadline: date, // 執行希望日
     details: required('詳細'),
   }),
-])
+]).superRefine(checkItems)
 export type ExecutionRequestInput = z.input<typeof executionRequestSchema>
 
 export const evidenceSchema = z.object({
   advancedName: required('立替者氏名'),
   department: required('局'),
   inCharge: required('担当名'),
-  itemNumber: itemNumberSchema,
+  ...items,
   itemName: required('支出項目名（内訳）'),
   quantity: required('数量'),
   kindOfEvidence: z.enum(['領収書', 'レシート', '見積書', 'その他']),
   payDate: date,
   amount: yen,
   refundTiming: z.enum(['委員返金と同時', 'できる限り早く']),
-})
+}).superRefine(checkItems)
 export type EvidenceInput = z.input<typeof evidenceSchema>
 
 export const executeSchema = z.object({

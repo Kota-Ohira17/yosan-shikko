@@ -7,6 +7,7 @@ export default defineNuxtConfig({
   },
   $development: {
     // ローカルは http なので、Secure 属性付きの Cookie を捨てるブラウザ（Safari など）でもログインできるようにする
+    // @ts-expect-error password は環境変数 NUXT_SESSION_PASSWORD から入るので、ここでは cookie だけ上書きする
     runtimeConfig: { session: { cookie: { secure: false } } },
   },
   runtimeConfig: {

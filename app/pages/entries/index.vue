@@ -113,6 +113,15 @@ async function setDone(row: Row, done: boolean) {
             </tr>
             <tr v-if="opened === row.id" class="detail">
               <td colspan="10">
+                <div v-if="row.items.length" class="items">
+                  <strong>予算明細（{{ row.items.length }}件）</strong>
+                  <ul>
+                    <li v-for="i in row.items" :key="i.id">
+                      <span class="muted">{{ i.itemNumber }}</span> {{ i.label }}
+                      <span class="muted">予算 {{ formatYen(i.budgetAmount) }}</span>
+                    </li>
+                  </ul>
+                </div>
                 <dl>
                   <template v-for="d in detailRows(row)" :key="d.label">
                     <dt>{{ d.label }}</dt>

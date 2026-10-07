@@ -9,6 +9,7 @@ const form = reactive({
   applicantName: user.value?.name ?? '',
   department: '',
   inCharge: '',
+  budgetLineKeys: [] as string[],
   itemNumber: '',
   itemName: '',
   budgetChange: '変動なし',
@@ -45,6 +46,7 @@ function buildPayload() {
     applicantName: form.applicantName,
     department: form.department,
     inCharge: form.inCharge,
+    budgetLineKeys: form.budgetLineKeys,
     itemNumber: form.itemNumber,
     itemName: form.itemName,
     budgetChange: form.budgetChange,
@@ -82,10 +84,6 @@ async function onSubmit() {
           <label>局<input v-model="form.department" placeholder="ZAI" required></label>
           <label>担当名<input v-model="form.inCharge" placeholder="logi" required></label>
         </div>
-        <div class="row">
-          <label>項目番号<input v-model="form.itemNumber" placeholder="out-03-02-06" required></label>
-          <label>支出項目名<input v-model="form.itemName" required></label>
-        </div>
         <label>補正予算からの変更
           <select v-model="form.budgetChange">
             <option>変動なし</option><option>増額</option><option>減額</option>
@@ -96,6 +94,16 @@ async function onSubmit() {
             <option v-for="t in PAYMENT_TYPES" :key="t">{{ t }}</option>
           </select>
         </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>執行項目（複数選択可）</legend>
+        <ExpenseItemsField
+          v-model:keys="form.budgetLineKeys"
+          v-model:item-number="form.itemNumber"
+          v-model:item-name="form.itemName"
+          item-name-label="支出項目名"
+        />
       </fieldset>
 
       <fieldset>

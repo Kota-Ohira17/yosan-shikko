@@ -15,6 +15,7 @@ async function logout() {
         <NuxtLink to="/requests/new">執行依頼</NuxtLink>
         <NuxtLink to="/evidences/new">証憑提出</NuxtLink>
         <NuxtLink to="/entries">{{ user?.isAdmin ? '台帳' : '自分の申請' }}</NuxtLink>
+        <NuxtLink v-if="user?.isAdmin" to="/budget">予算</NuxtLink>
       </nav>
       <div v-if="loggedIn" class="me">
         <span>{{ user?.name }}<small v-if="user?.isAdmin">（会計）</small></span>

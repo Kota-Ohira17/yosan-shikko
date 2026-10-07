@@ -6,6 +6,7 @@ const form = reactive({
   advancedName: user.value?.name ?? '',
   department: '',
   inCharge: '',
+  budgetLineKeys: [] as string[],
   itemNumber: '',
   itemName: '',
   quantity: '',
@@ -38,8 +39,15 @@ async function onSubmit() {
         <label>局<input v-model="form.department" required></label>
         <label>担当名<input v-model="form.inCharge" required></label>
       </div>
-      <label>支出項目（項目番号）<input v-model="form.itemNumber" placeholder="out-06-14" required></label>
-      <label>支出項目名（内訳）<textarea v-model="form.itemName" rows="2" required /></label>
+      <fieldset>
+        <legend>支出項目（複数選択可）</legend>
+        <ExpenseItemsField
+          v-model:keys="form.budgetLineKeys"
+          v-model:item-number="form.itemNumber"
+          v-model:item-name="form.itemName"
+          item-name-label="支出項目名（内訳）"
+        />
+      </fieldset>
       <label>数量<input v-model="form.quantity" required></label>
       <div class="row">
         <label>証憑の種類

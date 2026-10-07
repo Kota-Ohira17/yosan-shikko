@@ -38,5 +38,5 @@ export default defineEventHandler(async (event) => {
     .where(and(...conds))
     .orderBy(...orderBy)
 
-  return rows.map(r => toPublicEntry(r, user.isAdmin))
+  return (await withItems(rows)).map(r => toPublicEntry(r, user.isAdmin))
 })

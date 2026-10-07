@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
     .where(eq(e.id, id))
     .returning()
 
-  if (body.done) await notifyN8n('executed', updated!)
-  return updated
+  const [withItemsEntry] = await withItems([updated!])
+  if (body.done) await notifyN8n('executed', withItemsEntry!)
+  return withItemsEntry
 })

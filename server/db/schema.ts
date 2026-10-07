@@ -53,3 +53,41 @@ export const counters = sqliteTable('counters', {
 })
 
 export type Entry = typeof entries.$inferSelect
+
+/**
+ * 本予算「支出」シートの明細（金額のある行）。会計担当が CSV を取り込むたびに全件入れ替える。
+ * key は「項目番号|名前|数量」で、取り込み直しても同じ明細なら同じ key になる。
+ */
+export const budgetLines = sqliteTable('budget_lines', {
+  key: text('key').primaryKey(),
+  sortOrder: integer('sort_order').notNull(),
+  itemNumber: text('item_number').notNull(),
+  bureau: text('bureau').notNull().default(''),
+  team: text('team').notNull().default(''),
+  /** 款 / 項 / 目 / 節 を「 / 」でつないだ表示名 */
+  label: text('label').notNull(),
+  quantity: text('quantity').notNull().default(''),
+  vendor: text('vendor').notNull().default(''),
+  budgetAmount: integer('budget_amount').notNull(),
+  link: text('link').notNull().default(''),
+  plannedTiming: text('planned_timing').notNull().default(''),
+  remark: text('remark').notNull().default(''),
+  importedAt: integer('imported_at', { mode: 'timestamp_ms' }).notNull(),
+})
+
+/**
+ * 申請と予算明細の対応（1申請に複数明細）。予算を取り込み直しても過去の申請が崩れないよう、
+ * 申請時点の明細の内容をコピーして持つ。
+ */
+export const entryItems = sqliteTable('entry_items', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  entryId: integer('entry_id').notNull().references(() => entries.id),
+  lineKey: text('line_key').notNull(),
+  itemNumber: text('item_number').notNull(),
+  label: text('label').notNull(),
+  quantity: text('quantity').notNull().default(''),
+  budgetAmount: integer('budget_amount').notNull(),
+})
+
+export type BudgetLine = typeof budgetLines.$inferSelect
+export type EntryItem = typeof entryItems.$inferSelect

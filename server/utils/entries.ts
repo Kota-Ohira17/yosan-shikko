@@ -1,5 +1,50 @@
-import { sql } from 'drizzle-orm'
-import type { Entry } from '../db/schema'
+import { asc, inArray, sql } from 'drizzle-orm'
+import type { BudgetLine, Entry, EntryItem } from '../db/schema'
+
+/**
+ * 選ばれた予算明細を引く。手入力（予算にない項目）のときは空配列と入力された項目番号を返す。
+ * 複数の項目番号にまたがる場合は「out-03-02-06, out-03-07-01」のようにまとめる。
+ */
+export async function resolveBudgetLines(keys: string[], manualItemNumber: string) {
+  if (!keys.length) return { itemNumber: manualItemNumber, lines: [] as BudgetLine[] }
+  const unique = [...new Set(keys)]
+  const found = await useDb().select().from(schema.budgetLines).where(inArray(schema.budgetLines.key, unique))
+  if (found.length !== unique.length) {
+    throw createError({ statusCode: 400, message: '選んだ予算明細が見つかりません。予算が取り込み直された可能性があるので、ページを再読み込みして選び直してください' })
+  }
+  const lines = found.sort((a, b) => a.sortOrder - b.sortOrder)
+  return { itemNumber: [...new Set(lines.map(l => l.itemNumber))].join(', '), lines }
+}
+
+/** 申請と、選ばれた予算明細のコピーを1トランザクションで保存する */
+export async function insertEntry(values: typeof schema.entries.$inferInsert, lines: BudgetLine[]) {
+  return useDb().transaction(async (tx) => {
+    const [entry] = await tx.insert(schema.entries).values(values).returning()
+    const items = lines.length
+      ? await tx.insert(schema.entryItems).values(lines.map(l => ({
+          entryId: entry!.id,
+          lineKey: l.key,
+          itemNumber: l.itemNumber,
+          label: l.label,
+          quantity: l.quantity,
+          budgetAmount: l.budgetAmount,
+        }))).returning()
+      : []
+    return { ...entry!, items }
+  })
+}
+
+/** 一覧に予算明細を付ける */
+export async function withItems<T extends Entry>(rows: T[]): Promise<(T & { items: EntryItem[] })[]> {
+  if (!rows.length) return []
+  const items = await useDb()
+    .select()
+    .from(schema.entryItems)
+    .where(inArray(schema.entryItems.entryId, rows.map(r => r.id)))
+    .orderBy(asc(schema.entryItems.id))
+  const byEntry = Map.groupBy(items, i => i.entryId)
+  return rows.map(r => ({ ...r, items: byEntry.get(r.id) ?? [] }))
+}
 
 /** 通し番号を原子的に払い出す（旧GASの ScriptProperties カウンタの置き換え） */
 export async function nextSeq(kind: 'execution' | 'evidence') {
@@ -18,12 +63,17 @@ function withoutBank(details: Record<string, unknown>) {
 }
 
 /** 会計担当以外には口座情報を返さない */
-export function toPublicEntry(entry: Entry, isAdmin: boolean) {
+export function toPublicEntry<T extends Entry>(entry: T, isAdmin: boolean): T {
   return isAdmin ? entry : { ...entry, details: withoutBank(entry.details) }
 }
 
 /** n8n/Slack に渡す内容。口座情報は常に除外する */
-export function toNotification(entry: Entry) {
-  const { applicantEmail: _email, attachmentId, executedBy: _by, ...rest } = entry
-  return { ...rest, details: withoutBank(entry.details), hasAttachment: Boolean(attachmentId) }
+export function toNotification(entry: Entry & { items?: EntryItem[] }) {
+  const { applicantEmail: _email, attachmentId, executedBy: _by, items, ...rest } = entry
+  return {
+    ...rest,
+    details: withoutBank(entry.details),
+    hasAttachment: Boolean(attachmentId),
+    items: items?.map(i => ({ itemNumber: i.itemNumber, label: i.label, budgetAmount: i.budgetAmount })) ?? [],
+  }
 }
