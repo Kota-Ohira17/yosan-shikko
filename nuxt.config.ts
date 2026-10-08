@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   modules: ['nuxt-auth-utils'],
   css: ['~/assets/main.css'],
   app: {
-    head: { title: '財務管理', htmlAttrs: { lang: 'ja' } },
+    head: { title: '財務管理システム', htmlAttrs: { lang: 'ja' } },
   },
   $development: {
     // ローカルは http なので、Secure 属性付きの Cookie を捨てるブラウザ（Safari など）でもログインできるようにする

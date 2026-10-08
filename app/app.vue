@@ -27,7 +27,7 @@ async function logout() {
     </div>
 
     <header class="topbar">
-      <NuxtLink to="/" class="brand">財務管理</NuxtLink>
+      <NuxtLink to="/" class="brand">財務管理システム</NuxtLink>
       <span v-if="loggedIn" class="role-badge">{{ roleLabel }}</span>
       <div v-if="loggedIn" class="me">
         <span class="me-name">{{ user?.name }}</span>
