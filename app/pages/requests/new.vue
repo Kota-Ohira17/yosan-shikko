@@ -48,19 +48,46 @@ const tabBureau = ref('')
 const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 'amount'))
 const onBudgetChangeInput = useBudgetChangeFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemAmounts'), toRef(form, 'budgetChange'))
 
-// 取引先が空欄の明細には、発注なら通販サイト、立替なら購入先を入れる
-const isAutoVendor = useVendorDefault(toRef(form, 'itemVendors'), computed(() => (methodGroup.value === '発注' ? form.site : methodGroup.value === '立替' ? form.purchase : '')))
+const { data: budgetLines } = useBudgetLines()
+/** 予算の明細を選んでいるか（選んでいれば、金額・数量・取引先は形態ごとの欄で明細ごとに入力する） */
+const hasItems = computed(() => form.budgetLineKeys.length > 0)
+/** 明細ごとの欄に出す列。発注の取引先は通販サイト、立替は購入先なので出さない */
+const itemFields = computed(() => (methodGroup.value === '発注' || methodGroup.value === '立替'
+  ? ['quantity', 'amount'] as const
+  : ['quantity', 'vendor', 'amount'] as const))
 
-// 逆に、表から推測できる項目（担当名・購入先・通販サイト・数量）は、選んだ明細から初期値を入れておく
+// 明細ごとに入れた金額の合計・数量を、申請の金額・数量にする（同じことを2回入力させない）
+const itemsQuantity = useQuantityOfItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemQuantities'))
+watch([() => form.itemAmounts, hasItems], () => {
+  if (!hasItems.value) return
+  const values = form.budgetLineKeys.map(k => form.itemAmounts[k]).filter(v => typeof v === 'number') as number[]
+  form.amount = values.length ? String(values.reduce((s, v) => s + v, 0)) : ''
+}, { deep: true })
+watch([itemsQuantity, hasItems], () => { if (hasItems.value) form.quantity = itemsQuantity.value })
+
+// 発注・立替では、明細の取引先を通販サイト・購入先にそろえる。ほかの形態に切り替えたら予算の取引先に戻す
+let vendorSource = ''
+watch([methodGroup, () => form.site, () => form.purchase, () => form.budgetLineKeys], () => {
+  const source = methodGroup.value === '発注' ? form.site : methodGroup.value === '立替' ? form.purchase : ''
+  const byKey = new Map(budgetLines.value.map(l => [l.key, l]))
+  const next = { ...form.itemVendors }
+  for (const k of form.budgetLineKeys) {
+    if (source) next[k] = source
+    else if (vendorSource && next[k] === vendorSource) next[k] = byKey.get(k)?.vendor ?? ''
+  }
+  vendorSource = source
+  form.itemVendors = next
+})
+
+// 表から推測できる項目（担当名・購入先・通販サイト）は、選んだ明細の予算の値から初期値を入れておく
 useAutoFill(toRef(form, 'inCharge'), useTeamOfItems(toRef(form, 'budgetLineKeys')))
-/** 選んだ明細の取引先（上で自動で入れたものを除く。重複なし） */
-const itemVendors = computed(() => [...new Set(form.budgetLineKeys
-  .filter(k => !isAutoVendor(k))
-  .map(k => form.itemVendors[k] ?? '')
-  .filter(Boolean))])
-useAutoFill(toRef(form, 'purchase'), computed(() => itemVendors.value.join('、')))
-useAutoFill(toRef(form, 'site'), computed(() => (itemVendors.value.length === 1 ? siteOfVendor(itemVendors.value[0]!) : '')))
-useAutoFill(toRef(form, 'quantity'), useQuantityOfItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemQuantities')))
+/** 選んだ明細の、予算の表にある取引先（重複なし） */
+const budgetVendors = computed(() => {
+  const byKey = new Map(budgetLines.value.map(l => [l.key, l]))
+  return [...new Set(form.budgetLineKeys.map(k => byKey.get(k)?.vendor ?? '').filter(Boolean))]
+})
+useAutoFill(toRef(form, 'purchase'), computed(() => budgetVendors.value.join('、')))
+useAutoFill(toRef(form, 'site'), computed(() => (budgetVendors.value.length === 1 ? siteOfVendor(budgetVendors.value[0]!) : '')))
 
 /** 2段目の執行形態（現金執行 / カード決済 / その他） */
 const otherType = computed(() => OTHER_METHODS.find(m => m.label === form.otherChoice)?.type ?? (form.otherChoice ? 'その他' : ''))
@@ -165,7 +192,16 @@ async function onSubmit() {
         <p class="section-desc">ZAIが取引先の口座に直接振り込みます。</p>
         <label>（ある場合は）請求書<input type="file" accept="application/pdf,image/*" @change="file = ($event.target as HTMLInputElement).files?.[0] ?? null"></label>
         <label><span>振込期限<span class="req">*</span></span><input v-model="form.transferDeadline" type="date" required></label>
-        <label><span>振込金額<span class="req">*</span></span>
+        <ItemDetailsInputs
+          v-if="hasItems"
+          v-model:amounts="form.itemAmounts"
+          v-model:quantities="form.itemQuantities"
+          v-model:vendors="form.itemVendors"
+          :keys="form.budgetLineKeys"
+          :fields="itemFields"
+          amount-label="振込金額"
+        />
+        <label v-else><span>振込金額<span class="req">*</span></span>
           <span class="hint">絶対に間違えないでください。「円」は入れないでください。</span>
           <YenInput v-model="form.amount" placeholder="例：10000" required @input="onAmountInput" />
         </label>
@@ -185,10 +221,20 @@ async function onSubmit() {
       <fieldset v-else-if="methodGroup === '発注'">
         <legend>発注</legend>
         <p class="section-desc">ZAIが駒場祭委員会の各種アカウントで発注を行います。</p>
-        <RadioWithOther v-model="form.site" label="通販サイト" :options="ONLINE_SITES" other required />        <label><span>商品ページのリンク<span class="req">*</span></span>
+        <RadioWithOther v-model="form.site" label="通販サイト" :options="ONLINE_SITES" other required />
+        <label><span>商品ページのリンク<span class="req">*</span></span>
           <textarea v-model="form.url" rows="3" placeholder="複数ある場合は改行して入力してください" required />
         </label>
-        <label><span>数量<span class="req">*</span></span><input v-model="form.quantity" required></label>
+        <ItemDetailsInputs
+          v-if="hasItems"
+          v-model:amounts="form.itemAmounts"
+          v-model:quantities="form.itemQuantities"
+          v-model:vendors="form.itemVendors"
+          :keys="form.budgetLineKeys"
+          :fields="itemFields"
+          amount-label="金額"
+        />
+        <label v-else><span>数量<span class="req">*</span></span><input v-model="form.quantity" required></label>
         <label><span>いつまでに必要ですか？<span class="req">*</span></span><input v-model="form.neededBy" type="date" required></label>
         <RadioWithOther v-model="form.deliveryPlace" label="配達場所" :options="DELIVERY_PLACES" other required />
         <label>備考<input v-model="form.remark"></label>
@@ -201,11 +247,20 @@ async function onSubmit() {
           領収書といった証憑は必ず<NuxtLink to="/evidences/new">証憑提出</NuxtLink>から提出してください。<br>
           清算の日程については購入後領収書等とともに証憑提出で希望を入力してください。
         </p>
-        <label><span>立替合計金額<span class="req">*</span></span>
+        <label><span>購入先<span class="req">*</span></span><input v-model="form.purchase" required></label>
+        <ItemDetailsInputs
+          v-if="hasItems"
+          v-model:amounts="form.itemAmounts"
+          v-model:quantities="form.itemQuantities"
+          v-model:vendors="form.itemVendors"
+          :keys="form.budgetLineKeys"
+          :fields="itemFields"
+          amount-label="金額"
+        />
+        <label v-else><span>立替合計金額<span class="req">*</span></span>
           <span class="hint">「円」は入れないでください。</span>
           <YenInput v-model="form.amount" placeholder="例：10000" required @input="onAmountInput" />
         </label>
-        <label><span>購入先<span class="req">*</span></span><input v-model="form.purchase" required></label>
         <RadioWithOther
           v-model="form.paperReceipt"
           label="紙媒体の領収証の有無"
@@ -221,7 +276,16 @@ async function onSubmit() {
         <legend>現金執行・カード決済（デビットカード）・その他</legend>
         <p class="section-desc">カード決済にはカードの登録も含みます。</p>
         <RadioWithOther v-model="form.otherChoice" label="執行形態" :options="OTHER_LABELS" other required />
-        <label><span>金額<span class="req">*</span></span>
+        <ItemDetailsInputs
+          v-if="hasItems"
+          v-model:amounts="form.itemAmounts"
+          v-model:quantities="form.itemQuantities"
+          v-model:vendors="form.itemVendors"
+          :keys="form.budgetLineKeys"
+          :fields="itemFields"
+          amount-label="金額"
+        />
+        <label v-else><span>金額<span class="req">*</span></span>
           <span class="hint">「円」は入れないでください。</span>
           <YenInput v-model="form.amount" placeholder="例：10000" required @input="onAmountInput" />
         </label>

@@ -23,9 +23,17 @@ useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
 /** 予算の表で開く局。自分で局を選んだときだけ変える（明細から局が自動で入ったときは表を動かさない） */
 const tabBureau = ref('')
 const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 'amount'))
-// 表から推測できる担当名・数量は、選んだ明細から初期値を入れておく
+// 表から推測できる担当名は、選んだ明細から初期値を入れておく
 useAutoFill(toRef(form, 'inCharge'), useTeamOfItems(toRef(form, 'budgetLineKeys')))
-useAutoFill(toRef(form, 'quantity'), useQuantityOfItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemQuantities')))
+// 明細を選んだら、金額・数量は明細ごとの欄で入力し、その合計・まとめを申請の値にする（2回入力させない）
+const hasItems = computed(() => form.budgetLineKeys.length > 0)
+const itemsQuantity = useQuantityOfItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemQuantities'))
+watch([itemsQuantity, hasItems], () => { if (hasItems.value) form.quantity = itemsQuantity.value })
+watch([() => form.itemAmounts, hasItems], () => {
+  if (!hasItems.value) return
+  const values = form.budgetLineKeys.map(k => form.itemAmounts[k]).filter(v => typeof v === 'number') as number[]
+  form.amount = values.length ? String(values.reduce((s, v) => s + v, 0)) : ''
+}, { deep: true })
 const done = ref<string>()
 
 async function onSubmit() {
@@ -62,7 +70,18 @@ async function onSubmit() {
           item-name-label="支出項目名（内訳）"
         />
       </fieldset>
-      <label>数量<input v-model="form.quantity" required></label>
+      <fieldset v-if="hasItems">
+        <legend>明細ごとの立替金額・数量・取引先</legend>
+        <ItemDetailsInputs
+          v-model:amounts="form.itemAmounts"
+          v-model:quantities="form.itemQuantities"
+          v-model:vendors="form.itemVendors"
+          :keys="form.budgetLineKeys"
+          :fields="['quantity', 'vendor', 'amount']"
+          amount-label="立替金額"
+        />
+      </fieldset>
+      <label v-else>数量<input v-model="form.quantity" required></label>
       <div class="row">
         <label>証憑の種類
           <select v-model="form.kindOfEvidence">
@@ -71,7 +90,7 @@ async function onSubmit() {
         </label>
         <label>立替日付<input v-model="form.payDate" type="date" required></label>
       </div>
-      <label>立替金額（円）<YenInput v-model="form.amount" required @input="onAmountInput" /></label>
+      <label v-if="!hasItems">立替金額（円）<YenInput v-model="form.amount" required @input="onAmountInput" /></label>
       <label>証憑ファイル<input type="file" accept="application/pdf,image/*" required @change="file = ($event.target as HTMLInputElement).files?.[0] ?? null"></label>
       <label>返金時期
         <select v-model="form.refundTiming"><option>委員返金と同時</option><option>できる限り早く</option></select>
