@@ -146,7 +146,7 @@ async function onSubmit() {
         <label><span>振込期限<span class="req">*</span></span><input v-model="form.transferDeadline" type="date" required></label>
         <label><span>振込金額<span class="req">*</span></span>
           <span class="hint">絶対に間違えないでください。「円」は入れないでください。</span>
-          <input v-model="form.amount" type="number" min="1" placeholder="例：10000" required @input="onAmountInput">
+          <YenInput v-model="form.amount" placeholder="例：10000" required @input="onAmountInput" />
         </label>
         <div class="row">
           <label><span>金融機関名<span class="req">*</span></span><input v-model="form.bank.bankName" placeholder="例：ゆうちょ銀行" required></label>
@@ -183,7 +183,7 @@ async function onSubmit() {
         </p>
         <label><span>立替合計金額<span class="req">*</span></span>
           <span class="hint">「円」は入れないでください。</span>
-          <input v-model="form.amount" type="number" min="1" placeholder="例：10000" required @input="onAmountInput">
+          <YenInput v-model="form.amount" placeholder="例：10000" required @input="onAmountInput" />
         </label>
         <label><span>購入先<span class="req">*</span></span><input v-model="form.purchase" required></label>
         <RadioWithOther
@@ -203,7 +203,7 @@ async function onSubmit() {
         <RadioWithOther v-model="form.otherChoice" label="執行形態" :options="OTHER_LABELS" other required />
         <label><span>金額<span class="req">*</span></span>
           <span class="hint">「円」は入れないでください。</span>
-          <input v-model="form.amount" type="number" min="1" placeholder="例：10000" required @input="onAmountInput">
+          <YenInput v-model="form.amount" placeholder="例：10000" required @input="onAmountInput" />
         </label>
         <label><span>執行希望日時<span class="req">*</span></span>
           <span class="hint">ZAIの都合が合わない場合はこちらから連絡します。</span>

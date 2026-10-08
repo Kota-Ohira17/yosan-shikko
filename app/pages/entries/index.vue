@@ -242,7 +242,7 @@ async function setDone(row: Row, done: boolean) {
                       <select v-model="exec.bank"><option v-for="b in TRANSFER_BANKS" :key="b">{{ b }}</option></select>
                     </label>
                     <template v-if="row.type === '発注' && !row.items.length">
-                      <label>確定金額（円）<input v-model="exec.amount" type="number" min="1"></label>
+                      <label>確定金額（円）<YenInput v-model="exec.amount" /></label>
                       <label>数量<input v-model="exec.quantity"></label>
                     </template>
                     <button @click="setDone(row, true)">対応済みにする</button>
