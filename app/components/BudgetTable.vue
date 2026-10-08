@@ -50,6 +50,18 @@ const isOn = (row: Row) => row.line != null && (props.selected?.includes(row.lin
 const wrap = useTemplateRef<HTMLDivElement>('wrap')
 watch(() => props.lines, () => wrap.value?.scrollTo({ top: 0 }))
 
+/**
+ * 本予算「支出」シートと同じく、局・担当・款・項の見出しの行は、その階層の列から右側だけを塗る
+ * （目・節・明細の行は塗らない）。色は CSS の --fill-*。
+ */
+const FILL_FROM: Partial<Record<SheetRow<BudgetLineView>['level'], number>> = Object.fromEntries(
+  (['bureau', 'team', 'kan', 'kou'] as const).map(level => [level, SHEET_COLUMNS.indexOf(level)]),
+)
+function isFilled(row: Row, colIndex: number) {
+  const from = row.kind === 'group' ? FILL_FROM[row.level] : undefined
+  return from !== undefined && colIndex >= from
+}
+
 /** 見出しにマウスを乗せている間、押したら選ばれる明細を光らせる */
 const preview = ref<Set<string>>(new Set())
 function onRowEnter(row: Row) {
@@ -103,10 +115,10 @@ function onRowEnter(row: Row) {
               <span class="count" :title="`この${LEVEL_LABELS[row.level]}の下の明細 ${groupState(row)!.keys.length}件`">{{ groupState(row)!.keys.length }}</span>
             </label>
           </td>
-          <td v-for="c in COLUMNS" :key="c.key" :class="`c-${c.key}`">{{ row.cells[c.key] }}</td>
-          <td>{{ row.line?.quantity }}</td>
-          <td>{{ row.line?.vendor }}</td>
-          <td class="yen">{{ row.line ? formatYen(row.line.budgetAmount) : '' }}</td>
+          <td v-for="(c, ci) in COLUMNS" :key="c.key" :class="[`c-${c.key}`, { filled: isFilled(row, ci) }]">{{ row.cells[c.key] }}</td>
+          <td :class="{ filled: isFilled(row, COLUMNS.length) }">{{ row.line?.quantity }}</td>
+          <td :class="{ filled: isFilled(row, COLUMNS.length) }">{{ row.line?.vendor }}</td>
+          <td class="yen" :class="{ filled: isFilled(row, COLUMNS.length) }">{{ row.line ? formatYen(row.line.budgetAmount) : '' }}</td>
         </tr>
       </tbody>
     </table>
@@ -116,23 +128,21 @@ function onRowEnter(row: Row) {
 <style scoped>
 .sheet-wrap {
   max-height: 28rem; overflow: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
-  /* 階層ごとの色。上の階層ほど濃い（BudgetPicker の凡例と同じ） */
-  /* 款・項はメインカラー、目・節はサブカラーの淡い色で塗り分ける */
-  --lv-bureau: #ecdfd8;
-  --lv-kan: #f1e5df;
-  --lv-kou: var(--main);
-  --lv-moku: var(--sub);
-  --lv-setsu: #fcf9ee;
-  --stripe-kan: #d2b4a6;
-  --stripe-kou: #e2cdc3;
-  --stripe-moku: #e6d9a8;
-  --stripe-setsu: #efe6c4;
+  /* 本予算「支出」シートと同じ色（局: 黄、担当: 緑、款: 青、項: オレンジ、列見出し: グレー） */
+  --fill-bureau: #fff2cc;
+  --fill-team: #d9ead3;
+  --fill-kan: #c9daf8;
+  --fill-kou: #fce5cd;
+  --fill-head: #d9d9d9;
+  /* 選択した行・まとめて選ぶ対象の行（シートにない色にして見分けられるようにする） */
+  --row-picked: #e6dff5;
+  --row-preview: #f3f0fa;
 }
 /* 枠の高さを固定し、中で縦横にスクロールする（列の見出しは枠の上端に貼り付く） */
 .sheet-wrap.fixed-height { height: clamp(18rem, 60vh, 42rem); max-height: none; overscroll-behavior: contain; }
 .sheet { border-collapse: collapse; font-size: .8rem; width: 100%; min-width: 58rem; }
 .sheet th, .sheet td { border: 1px solid var(--border); padding: .2rem .4rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-.sheet th { position: sticky; top: 0; z-index: 1; background: var(--sub); color: var(--muted); font-weight: 600; white-space: nowrap; }
+.sheet th { position: sticky; top: 0; z-index: 1; background: var(--fill-head); color: #333; font-weight: 600; white-space: nowrap; }
 /* 局・担当・款は見出しの行にしか出ないので狭く、明細の名前が出る項・目・節を広くする */
 .sheet .c-number { width: 6rem; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); }
 .sheet .c-bureau { width: 4.2rem; }
@@ -145,36 +155,31 @@ function onRowEnter(row: Row) {
 .sheet .c-qty { width: 4.5rem; }
 .sheet .c-vendor { width: 6rem; }
 
-/* 見出しの行: 階層ごとに背景の濃さと文字の太さ、左端の線の色を変える */
-tr.group td { background: var(--bg); }
-tr.group.lv-bureau td { background: var(--lv-bureau); font-weight: 700; font-size: .85rem; }
-tr.group.lv-team td { background: var(--bg); font-weight: 600; }
-tr.group.lv-kan td { background: var(--lv-kan); font-weight: 700; border-top: 2px solid var(--stripe-kan); }
-tr.group.lv-kou td { background: var(--lv-kou); font-weight: 600; }
-tr.group.lv-moku td { background: var(--lv-moku); font-weight: 500; }
-tr.group.lv-setsu td { background: var(--lv-setsu); }
-tr.group.lv-kan > td:first-child { box-shadow: inset 5px 0 0 var(--stripe-kan); }
-tr.group.lv-kou > td:first-child { box-shadow: inset 5px 0 0 var(--stripe-kou); }
-tr.group.lv-moku > td:first-child { box-shadow: inset 5px 0 0 var(--stripe-moku); }
-tr.group.lv-setsu > td:first-child { box-shadow: inset 5px 0 0 var(--stripe-setsu); }
+/* 見出しの行: シートと同じく、その階層の列から右側だけを塗る（目・節は白） */
+tr.group.lv-bureau td.filled { background: var(--fill-bureau); }
+tr.group.lv-team td.filled { background: var(--fill-team); }
+tr.group.lv-kan td.filled { background: var(--fill-kan); }
+tr.group.lv-kou td.filled { background: var(--fill-kou); }
+.sheet td.filled { color: #222; }
+tr.group.lv-bureau td, tr.group.lv-kan td { font-weight: 700; }
+tr.group.lv-team td, tr.group.lv-kou td { font-weight: 600; }
+tr.group.lv-moku td { font-weight: 500; }
 
-/* まとめて選ぶチェックボックスと、階層名・件数のバッジ */
+/* まとめて選ぶチェックボックスと、階層名・件数のバッジ（バッジもシートの色） */
 .group-pick { display: inline-flex; align-items: center; gap: .25rem; cursor: pointer; padding-left: .3rem; }
 .lv-badge {
   display: inline-block; min-width: 1.4em; padding: 0 .3em; border-radius: 3px; text-align: center;
-  font-size: .72rem; font-weight: 700; line-height: 1.5; color: var(--text); background: var(--stripe-kan);
+  font-size: .72rem; font-weight: 700; line-height: 1.5; color: #333; background: #fff; border: 1px solid #ccc;
 }
-tr.lv-kou .lv-badge { background: var(--stripe-kou); color: var(--text); }
-tr.lv-moku .lv-badge { background: var(--stripe-moku); color: var(--text); }
-tr.lv-setsu .lv-badge { background: var(--stripe-setsu); color: var(--text); }
+tr.lv-kan .lv-badge { background: var(--fill-kan); border-color: #a4bfee; }
+tr.lv-kou .lv-badge { background: var(--fill-kou); border-color: #f2c69a; }
 .count { font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 tr.line .check { padding-left: .7rem; }
 
 .selectable tr.pickable { cursor: pointer; }
 .selectable tr.group.pickable:hover td { filter: brightness(.97); }
-.selectable tr.line:hover td { background: var(--preview-bg); }
+.selectable tr.line:hover td { background: var(--row-preview); }
 /* 見出しにマウスを乗せたとき、まとめて選ばれる明細 */
-tr.line.preview td { background: var(--preview-bg); }
-tr.line.preview > td:first-child { box-shadow: inset 3px 0 0 var(--stripe-moku); }
-tr.line.on td { background: var(--picked-bg); }
+tr.line.preview td { background: var(--row-preview); }
+tr.line.on td { background: var(--row-picked); }
 </style>

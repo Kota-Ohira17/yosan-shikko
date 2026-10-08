@@ -159,7 +159,7 @@ export async function writeTablesToSpreadsheet(spreadsheetId: string, tables: Ta
     requests.push({
       repeatCell: {
         range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
-        cell: { userEnteredFormat: { textFormat: { bold: true }, backgroundColor: rgb('EFEFEF') } },
+        cell: { userEnteredFormat: { textFormat: { bold: true }, backgroundColor: rgb(HEADER_FILL) } },
         fields: 'userEnteredFormat(textFormat,backgroundColor)',
       },
     })
@@ -183,12 +183,19 @@ export async function writeTablesToSpreadsheet(spreadsheetId: string, tables: Ta
     })
     t.rows.forEach((r, ri) => {
       const range = { sheetId, startRowIndex: ri + 1, endRowIndex: ri + 2 }
-      if (r.bold || r.fill) {
+      if (r.bold) {
+        requests.push({
+          repeatCell: { range, cell: { userEnteredFormat: { textFormat: { bold: true } } }, fields: 'userEnteredFormat.textFormat.bold' },
+        })
+      }
+      if (r.fill) {
+        // シートと同じく、塗り始める列から右だけを塗る
+        const from = Math.max(r.fillFrom ? t.columns.findIndex(c => c.key === r.fillFrom) : 0, 0)
         requests.push({
           repeatCell: {
-            range,
-            cell: { userEnteredFormat: { textFormat: { bold: !!r.bold }, ...(r.fill ? { backgroundColor: rgb(r.fill) } : {}) } },
-            fields: `userEnteredFormat(textFormat.bold${r.fill ? ',backgroundColor' : ''})`,
+            range: { ...range, startColumnIndex: from, endColumnIndex: t.columns.length },
+            cell: { userEnteredFormat: { backgroundColor: rgb(r.fill) } },
+            fields: 'userEnteredFormat.backgroundColor',
           },
         })
       }

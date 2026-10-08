@@ -33,7 +33,7 @@ function writeTable(wb: ExcelJS.Workbook, table: Table) {
   }))
   const head = ws.getRow(1)
   head.font = { bold: true }
-  head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } }
+  head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${HEADER_FILL}` } }
   head.border = { bottom: { style: 'thin' } }
 
   for (const row of table.rows) {
@@ -43,7 +43,13 @@ function writeTable(wb: ExcelJS.Workbook, table: Table) {
     ]))
     const r = ws.addRow(values)
     if (row.bold) r.font = { bold: true }
-    if (row.fill) r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${row.fill}` } }
+    if (row.fill) {
+      // シートと同じく、塗り始める列から右だけを塗る
+      const from = row.fillFrom ? table.columns.findIndex(c => c.key === row.fillFrom) : 0
+      for (let ci = Math.max(from, 0); ci < table.columns.length; ci++) {
+        r.getCell(ci + 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${row.fill}` } }
+      }
+    }
     if (row.topBorder) r.border = { top: { style: 'double' } }
     // リンクのセルは青字・下線
     table.columns.forEach((c, i) => {

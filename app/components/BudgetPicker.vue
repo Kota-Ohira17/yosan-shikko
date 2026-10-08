@@ -313,17 +313,16 @@ function toggleMany(keys: string[], on: boolean) {
 <style scoped>
 .picker { display: grid; gap: .75rem; min-width: 0; }
 .picker {
-  --stripe-kan: #d2b4a6;
-  --stripe-kou: #e2cdc3;
-  --stripe-moku: #e6d9a8;
-  --stripe-setsu: #efe6c4;
+  /* 本予算「支出」シートと同じ色（款: 青、項: オレンジ。目・節は白） */
+  --fill-kan: #c9daf8;
+  --fill-kou: #fce5cd;
 }
 .picked { border: 1px solid var(--accent); border-radius: 6px; padding: .5rem .75rem; display: grid; gap: .5rem; background: var(--sub); }
 .picked-head { display: flex; justify-content: space-between; gap: 1rem; font-size: .9rem; }
 /* 名前 | 予算額 | 数量 | 取引先 | 執行額 | 操作 の6列をそろえる */
 .cols, .kan-head, .picked li { display: grid; grid-template-columns: minmax(12rem, 1fr) 6rem 6.5rem 8.5rem 8.5rem 5rem; gap: .5rem; align-items: baseline; }
 .cols { font-size: .72rem; color: var(--muted); padding-left: calc(4px + .6rem + .4rem + .5rem + 1px); }
-.kan-group { border-left: 4px solid var(--stripe-kan); padding-left: .6rem; }
+.kan-group { border-left: 4px solid var(--fill-kan); padding-left: .6rem; }
 .kan-head { font-size: .88rem; padding: .15rem 0; }
 .kan-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; min-width: 0; }
 .amount, .text-cell { display: grid; gap: .1rem; min-width: 0; }
@@ -352,11 +351,10 @@ function toggleMany(keys: string[], on: boolean) {
 
 .lv-badge {
   display: inline-block; min-width: 1.4em; padding: 0 .3em; border-radius: 3px; text-align: center;
-  font-size: .72rem; font-weight: 700; line-height: 1.5; color: var(--text); background: var(--stripe-kan);
+  font-size: .72rem; font-weight: 700; line-height: 1.5; color: #333; background: var(--fill-kan); border: 1px solid #a4bfee;
 }
-.lv-badge.kou { background: var(--stripe-kou); color: var(--text); }
-.lv-badge.moku { background: var(--stripe-moku); color: var(--text); }
-.lv-badge.setsu { background: var(--stripe-setsu); color: var(--text); }
+.lv-badge.kou { background: var(--fill-kou); border-color: #f2c69a; }
+.lv-badge.moku, .lv-badge.setsu { background: #fff; border-color: #ccc; }
 .search { max-width: 28rem; }
 .bureau-tabs { display: flex; flex-wrap: wrap; gap: .3rem; border-bottom: 2px solid var(--accent); padding-bottom: .4rem; }
 .bureau-tabs button {

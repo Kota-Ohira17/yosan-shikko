@@ -24,6 +24,8 @@ export interface TableRow {
   bold?: boolean
   /** 背景色（RRGGBB） */
   fill?: string
+  /** 背景色を塗り始める列（この列から右だけ塗る。なければ行全体） */
+  fillFrom?: string
   /** 上に二重線（総計の行） */
   topBorder?: boolean
 }
@@ -34,14 +36,15 @@ export interface Table {
   rows: TableRow[]
 }
 
+/** 本予算「支出」シートと同じ色。その階層の列から右側だけを塗る（目・節は塗らない） */
 const LEVEL_FILL: Partial<Record<Level, string>> = {
-  bureau: 'C9DCF2',
-  team: 'F1F4F8',
-  kan: 'DCE8F7',
-  kou: 'EAF1FA',
-  moku: 'F4F8FC',
-  setsu: 'FAFCFE',
+  bureau: 'FFF2CC',
+  team: 'D9EAD3',
+  kan: 'C9DAF8',
+  kou: 'FCE5CD',
 }
+/** 列見出しの行の色（シートと同じグレー） */
+export const HEADER_FILL = 'D9D9D9'
 
 type DoneEntry = Entry & { items: EntryItem[] }
 
@@ -133,6 +136,7 @@ function settlementTable(lines: BudgetLine[], done: DoneEntry[], origin: string)
         },
         bold: row.level === 'bureau' || row.level === 'kan',
         fill: LEVEL_FILL[row.level],
+        fillFrom: LEVEL_FILL[row.level] ? row.level : undefined,
       })
       continue
     }
