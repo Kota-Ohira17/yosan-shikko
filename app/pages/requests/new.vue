@@ -47,6 +47,9 @@ useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
 const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 'amount'))
 const onBudgetChangeInput = useBudgetChangeFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemAmounts'), toRef(form, 'budgetChange'))
 
+// 取引先が空欄の明細には、発注なら通販サイト、立替なら購入先を入れる
+useVendorDefault(toRef(form, 'itemVendors'), computed(() => (methodGroup.value === '発注' ? form.site : methodGroup.value === '立替' ? form.purchase : '')))
+
 /** 2段目の執行形態（現金執行 / カード決済 / その他） */
 const otherType = computed(() => OTHER_METHODS.find(m => m.label === form.otherChoice)?.type ?? (form.otherChoice ? 'その他' : ''))
 const OTHER_LABELS = OTHER_METHODS.filter(m => m.type !== 'その他').map(m => m.label)

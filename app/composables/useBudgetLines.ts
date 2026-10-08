@@ -20,6 +20,32 @@ export function useBureauFromItems(keys: Ref<string[]>, department: Ref<string>)
 }
 
 /**
+ * 取引先が空欄の明細に、フォームで入れた取引先（発注なら通販サイト、立替なら購入先）を入れる。
+ * 自分で入力した取引先は上書きせず、ここで入れたものだけを入力に合わせて入れ替える。
+ */
+export function useVendorDefault(vendors: Ref<Record<string, string>>, source: Ref<string>) {
+  /** ここで自動で入れた明細と、そのときの値 */
+  const auto = new Map<string, string>()
+  watch([vendors, source], ([v, s]) => {
+    const next = { ...v }
+    let changed = false
+    for (const [key, value] of Object.entries(v)) {
+      const wasAuto = auto.has(key) && auto.get(key) === value
+      if (value !== '' && !wasAuto) {
+        auto.delete(key)
+        continue
+      }
+      if (value === s) continue
+      next[key] = s
+      if (s) auto.set(key, s)
+      else auto.delete(key)
+      changed = true
+    }
+    if (changed) vendors.value = next
+  }, { deep: true, immediate: true })
+}
+
+/**
  * 「補正予算からの変更」を、執行額の合計と予算額の合計から自動で選ぶ。手で選び直したら以降は上書きしない。
  * 戻り値は選択欄の変更時に呼ぶ関数。
  */

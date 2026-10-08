@@ -71,6 +71,8 @@ export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
   const get = (row: string[], k: keyof typeof COLUMNS) => (col[k] >= 0 ? (row[col[k]] ?? '').trim() : '')
 
   const ctx = { bureauNo: '', bureau: '', team: '', kanNo: '', kan: '', kouNo: '', kouRawNo: '', kou: '', moku: '', setsu: '' }
+  /** 款・項・目・節の行に書かれた取引先（下の明細に引き継ぐ） */
+  const vendors = { kan: '', kou: '', moku: '', setsu: '' }
   const lines: ParsedBudgetLine[] = []
   const seen = new Map<string, number>()
 
@@ -93,6 +95,14 @@ export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
     // 目の行の「節」列に金額が入っているのは小計なので名前として扱わない
     const setsuName = setsu && parseMoney(setsu) === null ? setsu : ''
     if (setsuName) ctx.setsu = setsuName
+
+    // 取引先は款・項・目の行にまとめて書かれ、下の明細の行は空欄のことが多いので引き継ぐ
+    const vendor = get(row, 'vendor')
+    if (bureau || team) vendors.kan = vendors.kou = vendors.moku = vendors.setsu = ''
+    if (kan) Object.assign(vendors, { kan: vendor, kou: '', moku: '', setsu: '' })
+    if (kou) Object.assign(vendors, { kou: vendor, moku: '', setsu: '' })
+    if (moku) Object.assign(vendors, { moku: vendor, setsu: '' })
+    if (setsuName) vendors.setsu = vendor
 
     const amount = parseMoney(get(row, 'amount'))
     if (amount === null) continue
@@ -126,7 +136,7 @@ export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
       level,
       label: nameless && quantity ? `${label}（${quantity}）` : label,
       quantity,
-      vendor: get(row, 'vendor'),
+      vendor: vendor || vendors.setsu || vendors.moku || vendors.kou || vendors.kan,
       budgetAmount: amount,
       link: get(row, 'link'),
       plannedTiming: get(row, 'plannedTiming'),
