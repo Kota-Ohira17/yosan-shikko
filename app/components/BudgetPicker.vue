@@ -327,6 +327,9 @@ function toggleMany(keys: string[], on: boolean) {
 .kan-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; min-width: 0; }
 .amount, .text-cell { display: grid; gap: .1rem; min-width: 0; }
 .text-cell input { padding: .2rem .4rem; }
+/* 取引先の入力候補（datalist）の▼は出さない（入力すると候補は出る） */
+.text-cell input::-webkit-calendar-picker-indicator { display: none !important; }
+.text-cell input::-webkit-list-button { display: none; }
 .amount input { padding: .2rem .4rem; text-align: right; font-variant-numeric: tabular-nums; }
 .diff { font-size: .72rem; color: var(--muted); text-align: right; }
 .amount input.invalid { border-color: var(--danger); }
