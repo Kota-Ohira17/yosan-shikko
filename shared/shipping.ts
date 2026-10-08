@@ -5,7 +5,7 @@
 export const SHIPPING_RULES: Record<string, { freeFrom: number | null, fee?: number, note: string }> = {
   ASKUL: { freeFrom: 2000, fee: 440, note: '法人会員は税込2,000円以上で配送料無料（未満は440円）' },
   モノタロウ: { freeFrom: 3850, note: '3,500円（税別）以上で送料無料' },
-  Amazon: { freeFrom: 3500, fee: 410, note: 'Amazon発送の商品は3,500円以上で配送料無料（未満は410円〜）。プライム会員なら常に無料' },
+  Amazon: { freeFrom: 3500, fee: 410, note: 'Amazon発送の商品は3,500円以上で配送料無料（未満は410円〜）' },
   楽天: { freeFrom: 3980, note: '送料はショップごとに違う（3,980円以上で無料のショップが多い）' },
   アースダンボール: { freeFrom: null, note: '常に送料無料になる基準はない（期間限定の送料無料キャンペーンあり）' },
 }

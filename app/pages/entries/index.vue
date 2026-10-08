@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { TRANSFER_BANKS, VIEWS, type ViewKey } from '#shared/constants'
-import { SHIPPING_RULES, shippingAdvice } from '#shared/shipping'
-
 const { can, entriesTitle } = usePermissions()
 const { public: { bankLinkSmbc, bankLinkYucho } } = useRuntimeConfig()
 /** 振込で使う口座 → その銀行のサイト（NUXT_PUBLIC_BANK_LINK_SMBC / _YUCHO で変えられる） */
@@ -14,19 +12,6 @@ const view = computed<ViewKey>({
   set: v => router.replace({ query: { view: v } }),
 })
 const { data: entries, refresh } = await useFetch('/api/entries', { query: { view } })
-
-/** 未対応の発注をサイトごとにまとめ、送料無料の基準に届くかを出す（送料の決まりがあるサイトだけ） */
-const orderSummary = computed(() => {
-  const bySite = new Map<string, { count: number, total: number }>()
-  for (const r of entries.value ?? []) {
-    if (r.type !== '発注' || r.status !== 'pending' || !SHIPPING_RULES[siteOf(r)]) continue
-    const s = bySite.get(siteOf(r)) ?? { count: 0, total: 0 }
-    s.count++
-    s.total += orderAmountOf(r)
-    bySite.set(siteOf(r), s)
-  }
-  return [...bySite].map(([site, s]) => ({ site, ...s, freeFrom: SHIPPING_RULES[site]!.freeFrom }))
-})
 
 const opened = ref<number>()
 const exec = reactive({ bank: 'SMBC' as (typeof TRANSFER_BANKS)[number], amount: '', quantity: '' })
@@ -182,18 +167,6 @@ async function setDone(row: Row, done: boolean) {
       </button>
     </nav>
 
-    <section v-if="orderSummary.length" class="order-summary" aria-label="未対応の発注（サイト別）">
-      <strong>未対応の発注（サイト別）</strong>
-      <ul>
-        <li v-for="s in orderSummary" :key="s.site">
-          {{ s.site }}：{{ s.count }}件・合計{{ yen(s.total) }}
-          <span v-if="s.freeFrom == null" class="muted">（送料無料の基準なし。まとめて発注すると送料1回分）</span>
-          <span v-else-if="s.total >= s.freeFrom" class="ok">まとめれば送料無料（基準 {{ yen(s.freeFrom) }}）</span>
-          <span v-else class="short">送料無料まであと{{ yen(s.freeFrom - s.total) }}（基準 {{ yen(s.freeFrom) }}）</span>
-        </li>
-      </ul>
-    </section>
-
     <p v-if="!entries?.length" class="empty">該当する申請はありません。</p>
 
     <div v-else class="table-wrap ledger-wrap">
@@ -222,12 +195,6 @@ async function setDone(row: Row, done: boolean) {
             </tr>
             <tr v-if="opened === row.id" class="detail">
               <td colspan="10">
-                <ShippingNotice
-                  v-if="row.type === '発注' && row.status === 'pending'"
-                  class="shipping-in-row"
-                  :advice="shippingAdvice(siteOf(row), orderAmountOf(row), pendingOrdersOf(entries, siteOf(row), row.id))"
-                  :site="siteOf(row)"
-                />
                 <div v-if="row.items.length" class="items">
                   <strong>予算明細（{{ row.items.length }}件）</strong>
                   <table class="items-table">
@@ -339,10 +306,6 @@ async function setDone(row: Row, done: boolean) {
 .ok { color: var(--done); font-size: .85rem; }
 .bank-pick { display: flex; align-items: end; gap: .6rem; }
 .bank-link { white-space: nowrap; padding-bottom: .5rem; }
-.order-summary { margin: 0 0 1rem; padding: .6rem .9rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: .88rem; }
-.order-summary ul { margin: .25rem 0 0; padding-left: 1.2rem; }
-.order-summary .short { color: #9a6b00; font-weight: 600; }
-.shipping-in-row { margin-bottom: .75rem; }
 
 /* スマホ: 台帳の1行を1枚のカードにして縦に並べる（中の明細の表は横スクロール） */
 @media (max-width: 600px) {
