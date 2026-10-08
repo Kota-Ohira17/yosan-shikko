@@ -16,14 +16,21 @@ export async function resolveBudgetLines(keys: string[], manualItemNumber: strin
   return { itemNumber: [...new Set(lines.map(l => l.itemNumber))].join(', '), lines }
 }
 
+/** 申請時に入力された、明細ごとの実際の値（明細の key → 値） */
+export interface ItemInputs {
+  itemAmounts?: Record<string, number>
+  itemQuantities?: Record<string, string>
+  itemVendors?: Record<string, string>
+}
+
 /**
- * 申請と、選ばれた予算明細のコピー（明細ごとの執行額つき）を1トランザクションで保存する。
+ * 申請と、選ばれた予算明細のコピー（明細ごとの執行額・数量・取引先つき）を1トランザクションで保存する。
  * 金額欄のない申請（発注など）で執行額が入っていれば、その合計を申請の金額にする。
  */
 export async function insertEntry(
   values: typeof schema.entries.$inferInsert,
   lines: BudgetLine[],
-  itemAmounts: Record<string, number> = {},
+  { itemAmounts = {}, itemQuantities = {}, itemVendors = {} }: ItemInputs = {},
 ) {
   const actuals = lines.map(l => itemAmounts[l.key] ?? null)
   if (values.amount == null && lines.length && actuals.every(a => a != null)) {
@@ -38,7 +45,10 @@ export async function insertEntry(
           itemNumber: l.itemNumber,
           label: l.label,
           quantity: l.quantity,
+          vendor: l.vendor,
           budgetAmount: l.budgetAmount,
+          actualQuantity: itemQuantities[l.key] ?? null,
+          actualVendor: itemVendors[l.key] ?? null,
           actualAmount: actuals[i],
         }))).returning()
       : []
@@ -95,6 +105,13 @@ export function toNotification(entry: Entry & { items?: EntryItem[] }) {
     ...rest,
     details: withoutBank(entry.details),
     hasAttachment: Boolean(attachmentId),
-    items: items?.map(i => ({ itemNumber: i.itemNumber, label: i.label, budgetAmount: i.budgetAmount })) ?? [],
+    items: items?.map(i => ({
+      itemNumber: i.itemNumber,
+      label: i.label,
+      budgetAmount: i.budgetAmount,
+      actualAmount: i.actualAmount,
+      quantity: i.actualQuantity ?? i.quantity,
+      vendor: i.actualVendor ?? i.vendor,
+    })) ?? [],
   }
 }

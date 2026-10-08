@@ -49,8 +49,23 @@ const isLink = (u: string) => /^https?:\/\//.test(u)
 const yen = (n: number | null) => (n == null ? '' : `${n.toLocaleString('ja-JP')}円`)
 const dateTime = (s: string | Date | null) => (s ? new Date(s).toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' }) : '')
 
-/** 明細ごとの執行額の編集中の値（entry_items の id → 入力値） */
+/** 明細ごとの執行額・数量・取引先の編集中の値（entry_items の id → 入力値） */
 const itemDrafts = reactive<Record<number, string>>({})
+const quantityDrafts = reactive<Record<number, string>>({})
+const vendorDrafts = reactive<Record<number, string>>({})
+
+type Item = Row['items'][number]
+/** 実際の数量・取引先（入力がなければ予算の値） */
+const quantityOf = (i: Item) => i.actualQuantity ?? i.quantity
+const vendorOf = (i: Item) => i.actualVendor ?? i.vendor
+
+function resetDrafts(items: Item[]) {
+  for (const i of items) {
+    itemDrafts[i.id] = i.actualAmount == null ? '' : String(i.actualAmount)
+    quantityDrafts[i.id] = quantityOf(i)
+    vendorDrafts[i.id] = vendorOf(i)
+  }
+}
 const itemsSaved = ref(false)
 
 function toggle(row: Row) {
@@ -59,11 +74,13 @@ function toggle(row: Row) {
   exec.quantity = row.quantity ?? ''
   execErrors.value = []
   itemsSaved.value = false
-  for (const i of row.items) itemDrafts[i.id] = i.actualAmount == null ? '' : String(i.actualAmount)
+  resetDrafts(row.items)
 }
 
 const itemsChanged = (row: Row) =>
-  row.items.some(i => (itemDrafts[i.id] ?? '') !== (i.actualAmount == null ? '' : String(i.actualAmount)))
+  row.items.some(i => (itemDrafts[i.id] ?? '') !== (i.actualAmount == null ? '' : String(i.actualAmount))
+    || (quantityDrafts[i.id] ?? '') !== quantityOf(i)
+    || (vendorDrafts[i.id] ?? '') !== vendorOf(i))
 
 const itemsActualTotal = (row: Row) => row.items.reduce((s, i) => s + (i.actualAmount ?? 0), 0)
 
@@ -76,7 +93,7 @@ function diff(budget: number, actual: number | null) {
 /** 数字として読めない執行額の入力 */
 const invalidItem = (id: number) => parseYenInput(itemDrafts[id] ?? '') === null
 
-/** 明細ごとの執行額を保存する。読めない入力があれば保存せず false */
+/** 明細ごとの執行額・数量・取引先を保存する。読めない執行額があれば保存せず false */
 async function saveItems(row: Row) {
   if (row.items.some(i => invalidItem(i.id))) {
     execErrors.value = ['執行額は数字で入力してください']
@@ -86,7 +103,10 @@ async function saveItems(row: Row) {
     const n = parseYenInput(itemDrafts[i.id] ?? '')
     return [i.id, n === '' ? null : n]
   }))
-  await $fetch(`/api/entries/${row.id}/items`, { method: 'PATCH', body: { amounts } })
+  // 数量・取引先は、予算と同じなら「入力なし」として保存する
+  const quantities = Object.fromEntries(row.items.map(i => [i.id, (quantityDrafts[i.id] ?? '').trim() === i.quantity ? null : (quantityDrafts[i.id] ?? '').trim()]))
+  const vendors = Object.fromEntries(row.items.map(i => [i.id, (vendorDrafts[i.id] ?? '').trim() === i.vendor ? null : (vendorDrafts[i.id] ?? '').trim()]))
+  await $fetch(`/api/entries/${row.id}/items`, { method: 'PATCH', body: { amounts, quantities, vendors } })
   return true
 }
 
@@ -97,9 +117,7 @@ async function onSaveItems(row: Row) {
     if (!await saveItems(row)) return
     await refresh()
     // 入力欄を保存された値（半角の数字）の表示にそろえる
-    for (const i of entries.value?.find(e => e.id === row.id)?.items ?? []) {
-      itemDrafts[i.id] = i.actualAmount == null ? '' : String(i.actualAmount)
-    }
+    resetDrafts(entries.value?.find(e => e.id === row.id)?.items ?? [])
     itemsSaved.value = true
   }
   catch (error) {
@@ -179,12 +197,22 @@ async function setDone(row: Row, done: boolean) {
                   <strong>予算明細（{{ row.items.length }}件）</strong>
                   <table class="items-table">
                     <thead>
-                      <tr><th>項目番号</th><th>明細</th><th class="num">予算額</th><th class="num">執行額</th><th class="num">予算比</th></tr>
+                      <tr><th>項目番号</th><th>明細</th><th>数量</th><th>取引先</th><th class="num">予算額</th><th class="num">執行額</th><th class="num">予算比</th></tr>
                     </thead>
                     <tbody>
                       <tr v-for="i in row.items" :key="i.id">
                         <td class="muted">{{ i.itemNumber }}</td>
                         <td>{{ i.label }}</td>
+                        <td>
+                          <input v-if="can('executeEntries')" v-model="quantityDrafts[i.id]" class="text-input" autocomplete="off" :aria-label="`${i.label} の数量`">
+                          <template v-else>{{ quantityOf(i) }}</template>
+                          <small v-if="quantityOf(i) !== i.quantity" class="muted was">予算: {{ i.quantity || 'なし' }}</small>
+                        </td>
+                        <td>
+                          <input v-if="can('executeEntries')" v-model="vendorDrafts[i.id]" class="text-input" autocomplete="off" :aria-label="`${i.label} の取引先`">
+                          <template v-else>{{ vendorOf(i) }}</template>
+                          <small v-if="vendorOf(i) !== i.vendor" class="muted was">予算: {{ i.vendor || 'なし' }}</small>
+                        </td>
                         <td class="num">{{ formatYen(i.budgetAmount) }}</td>
                         <td class="num">
                           <input
@@ -205,7 +233,7 @@ async function setDone(row: Row, done: boolean) {
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colspan="2">合計</td>
+                        <td colspan="4">合計</td>
                         <td class="num">{{ formatYen(row.items.reduce((s, i) => s + i.budgetAmount, 0)) }}</td>
                         <td class="num">{{ formatYen(itemsActualTotal(row)) }}</td>
                         <td />
@@ -213,7 +241,7 @@ async function setDone(row: Row, done: boolean) {
                     </tfoot>
                   </table>
                   <p v-if="can('executeEntries')" class="items-actions">
-                    <button type="button" class="secondary" :disabled="!itemsChanged(row)" @click="onSaveItems(row)">執行額を保存</button>
+                    <button type="button" class="secondary" :disabled="!itemsChanged(row)" @click="onSaveItems(row)">数量・取引先・執行額を保存</button>
                     <span v-if="itemsSaved" class="ok">保存しました（申請の金額も明細の合計にそろえました）</span>
                   </p>
                 </div>
@@ -266,6 +294,8 @@ async function setDone(row: Row, done: boolean) {
 .items-table th, .items-table td { padding: .25rem .5rem; }
 .items-table input { width: 8rem; padding: .15rem .35rem; text-align: right; font-variant-numeric: tabular-nums; }
 .items-table input.invalid { border-color: var(--danger); }
+.items-table input.text-input { width: 7rem; text-align: left; }
+.items-table .was { display: block; font-size: .72rem; }
 .items-table tfoot td { font-weight: 600; border-bottom: none; }
 .items-actions { display: flex; align-items: center; gap: .75rem; margin: 0 0 .75rem; }
 .ok { color: var(--done); font-size: .85rem; }

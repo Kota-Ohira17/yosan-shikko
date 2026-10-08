@@ -95,9 +95,13 @@ export const entryItems = sqliteTable('entry_items', {
   lineKey: text('line_key').notNull(),
   itemNumber: text('item_number').notNull(),
   label: text('label').notNull(),
+  /** 予算での数量・取引先・金額（申請時点のコピー） */
   quantity: text('quantity').notNull().default(''),
+  vendor: text('vendor').notNull().default(''),
   budgetAmount: integer('budget_amount').notNull(),
-  /** 実際の執行額（予算額から変わることが多い）。未入力なら null */
+  /** 実際の数量・取引先・執行額（予算から変わることが多い）。未入力なら null */
+  actualQuantity: text('actual_quantity'),
+  actualVendor: text('actual_vendor'),
   actualAmount: integer('actual_amount'),
 })
 

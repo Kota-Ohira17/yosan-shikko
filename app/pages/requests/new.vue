@@ -13,6 +13,8 @@ const form = reactive({
   inCharge: '',
   budgetLineKeys: [] as string[],
   itemAmounts: {} as Record<string, number | ''>,
+  itemQuantities: {} as Record<string, string>,
+  itemVendors: {} as Record<string, string>,
   itemNumber: '',
   itemName: '',
   budgetChange: '',
@@ -57,6 +59,8 @@ function buildPayload() {
     inCharge: form.inCharge,
     budgetLineKeys: form.budgetLineKeys,
     itemAmounts: filledAmounts(form.itemAmounts),
+    itemQuantities: form.itemQuantities,
+    itemVendors: form.itemVendors,
     itemNumber: form.itemNumber,
     itemName: form.itemName,
     budgetChange: form.budgetChange,
@@ -119,6 +123,8 @@ async function onSubmit() {
           <ExpenseItemsField
             v-model:keys="form.budgetLineKeys"
             v-model:amounts="form.itemAmounts"
+          v-model:quantities="form.itemQuantities"
+          v-model:vendors="form.itemVendors"
             v-model:item-number="form.itemNumber"
             v-model:item-name="form.itemName"
           :preferred-bureau="form.department"

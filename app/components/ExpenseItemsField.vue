@@ -7,6 +7,8 @@
  */
 const keys = defineModel<string[]>('keys', { required: true })
 const amounts = defineModel<Record<string, number | ''>>('amounts', { required: true })
+const quantities = defineModel<Record<string, string>>('quantities', { required: true })
+const vendors = defineModel<Record<string, string>>('vendors', { required: true })
 const itemNumber = defineModel<string>('itemNumber', { required: true })
 const itemName = defineModel<string>('itemName', { required: true })
 defineProps<{
@@ -33,6 +35,8 @@ watch(useManual, (m) => {
   if (m) {
     keys.value = []
     amounts.value = {}
+    quantities.value = {}
+    vendors.value = {}
   }
   else itemNumber.value = ''
 })
@@ -47,7 +51,14 @@ watch(useManual, (m) => {
         <input v-model="itemNumber" placeholder="out-03-02-06" required>
       </label>
     </template>
-    <BudgetPicker v-else v-model="keys" v-model:amounts="amounts" :preferred-bureau="preferredBureau" />
+    <BudgetPicker
+      v-else
+      v-model="keys"
+      v-model:amounts="amounts"
+      v-model:quantities="quantities"
+      v-model:vendors="vendors"
+      :preferred-bureau="preferredBureau"
+    />
 
     <button v-if="hasBudget" type="button" class="link" @click="manual = !manual">
       {{ manual ? '予算から選ぶ' : '予算にない項目を手入力する' }}

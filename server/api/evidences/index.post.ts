@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     attachmentId,
     // 旧GASでは証憑提出時点で執行形態「立替」・執行日=立替日として記録していた
     paymentMethod: '立替',
-  }, lines, input.itemAmounts)
+  }, lines, input)
 
   await notifyN8n('created', entry)
   setResponseStatus(event, 201)

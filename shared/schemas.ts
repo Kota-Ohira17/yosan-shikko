@@ -21,12 +21,20 @@ const items = {
   budgetLineKeys: z.array(z.string()).max(200, '選べる明細は200件までです').default([]),
   /** 明細ごとの実際の執行額（明細の key → 円）。予算額と違うことが多い */
   itemAmounts: z.record(z.string(), z.coerce.number({ error: '執行額は数字で入力してください' }).int('執行額は整数で入力してください')).default({}),
+  /** 明細ごとの実際の数量・取引先（明細の key → 文字）。予算と違うことがある */
+  itemQuantities: z.record(z.string(), z.string().trim().max(100)).default({}),
+  itemVendors: z.record(z.string(), z.string().trim().max(100)).default({}),
   itemNumber: z.string().trim().default(''),
 }
 
-/** 台帳で明細ごとの執行額を直す（entry_items の id → 円。null で未入力に戻す） */
-export const itemAmountsUpdateSchema = z.object({
-  amounts: z.record(z.string(), z.number().int('執行額は整数で入力してください').nullable()),
+/**
+ * 台帳で明細ごとの執行額・数量・取引先を直す（entry_items の id → 値。null で未入力に戻す）。
+ * 送られてきた項目だけ書き換える。
+ */
+export const itemsUpdateSchema = z.object({
+  amounts: z.record(z.string(), z.number().int('執行額は整数で入力してください').nullable()).default({}),
+  quantities: z.record(z.string(), z.string().trim().max(100).nullable()).default({}),
+  vendors: z.record(z.string(), z.string().trim().max(100).nullable()).default({}),
 })
 
 function checkItems(v: { budgetLineKeys: string[], itemNumber: string }, ctx: z.RefinementCtx) {

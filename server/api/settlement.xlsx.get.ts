@@ -180,6 +180,8 @@ function writeExecutionSheet(
     { header: '支出項目名', key: 'itemName', width: 28 },
     { header: '項目番号', key: 'itemNumber', width: 14 },
     { header: '予算明細', key: 'label', width: 40 },
+    { header: '数量', key: 'quantity', width: 10 },
+    { header: '取引先', key: 'vendor', width: 14 },
     { header: '予算額', key: 'budget', width: 12, style: { numFmt: YEN } },
     { header: '執行額', key: 'actual', width: 12, style: { numFmt: YEN } },
     { header: '申請の金額', key: 'entryAmount', width: 12, style: { numFmt: YEN } },
@@ -206,7 +208,16 @@ function writeExecutionSheet(
       continue
     }
     for (const i of e.items) {
-      ws.addRow({ ...base, itemNumber: i.itemNumber, label: i.label, budget: i.budgetAmount, actual: actualAmountOf(i, e) })
+      ws.addRow({
+        ...base,
+        itemNumber: i.itemNumber,
+        label: i.label,
+        // 実際の数量・取引先（入力がなければ予算のもの）
+        quantity: i.actualQuantity ?? i.quantity,
+        vendor: i.actualVendor ?? i.vendor,
+        budget: i.budgetAmount,
+        actual: actualAmountOf(i, e),
+      })
     }
   }
   ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: ws.columnCount } }

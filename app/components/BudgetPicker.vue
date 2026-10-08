@@ -3,10 +3,13 @@ import { BUREAUS } from '#shared/constants'
 
 /**
  * 予算明細をスプレッドシートと同じ形の表から複数選ぶ。v-model は明細の key の配列。
- * v-model:amounts は明細ごとの実際の執行額（選んだときは予算額が入り、違うところだけ直す）。
+ * v-model:amounts / quantities / vendors は明細ごとの実際の執行額・数量・取引先
+ * （選んだときは予算の値が入り、違うところだけ直す）。
  */
 const selected = defineModel<string[]>({ required: true })
 const amounts = defineModel<Record<string, number | ''>>('amounts', { default: () => ({}) })
+const quantities = defineModel<Record<string, string>>('quantities', { default: () => ({}) })
+const vendors = defineModel<Record<string, string>>('vendors', { default: () => ({}) })
 /** 最初に開く局（フォームで選んだ局の略称。例: ZAI） */
 const props = defineProps<{ preferredBureau?: string }>()
 const { data: lines } = await useBudgetLines()
@@ -34,6 +37,21 @@ watch(selected, (v) => { current.value = [...v] })
 
 const currentAmounts = ref<Record<string, number | ''>>({ ...amounts.value })
 watch(amounts, (v) => { currentAmounts.value = { ...v } })
+const currentQuantities = ref<Record<string, string>>({ ...quantities.value })
+watch(quantities, (v) => { currentQuantities.value = { ...v } })
+const currentVendors = ref<Record<string, string>>({ ...vendors.value })
+watch(vendors, (v) => { currentVendors.value = { ...v } })
+
+const vendorSuggestions = computed(() => [...new Set(lines.value.map(l => l.vendor).filter(Boolean))].sort())
+
+function setQuantity(key: string, value: string) {
+  currentQuantities.value = { ...currentQuantities.value, [key]: value }
+  quantities.value = currentQuantities.value
+}
+function setVendor(key: string, value: string) {
+  currentVendors.value = { ...currentVendors.value, [key]: value }
+  vendors.value = currentVendors.value
+}
 
 const byKey = computed(() => new Map(lines.value.map(l => [l.key, l])))
 const selectedLines = computed(() => current.value.map(k => byKey.value.get(k)).filter(l => l != null))
@@ -66,10 +84,21 @@ function setAmount(key: string, raw: string) {
   amounts.value = currentAmounts.value
 }
 
-/** 選択の変化に合わせて執行額をそろえる（新しく選んだ明細には予算額を入れておく） */
+/** 選択の変化に合わせて執行額・数量・取引先をそろえる（新しく選んだ明細には予算の値を入れておく） */
 function syncAmounts() {
   const next: Record<string, number | ''> = {}
-  for (const k of current.value) next[k] = k in currentAmounts.value ? currentAmounts.value[k]! : (byKey.value.get(k)?.budgetAmount ?? '')
+  const nextQuantities: Record<string, string> = {}
+  const nextVendors: Record<string, string> = {}
+  for (const k of current.value) {
+    const line = byKey.value.get(k)
+    next[k] = k in currentAmounts.value ? currentAmounts.value[k]! : (line?.budgetAmount ?? '')
+    nextQuantities[k] = k in currentQuantities.value ? currentQuantities.value[k]! : (line?.quantity ?? '')
+    nextVendors[k] = k in currentVendors.value ? currentVendors.value[k]! : (line?.vendor ?? '')
+  }
+  currentQuantities.value = nextQuantities
+  quantities.value = nextQuantities
+  currentVendors.value = nextVendors
+  vendors.value = nextVendors
   for (const k of Object.keys(rawAmounts)) {
     if (!(k in next)) {
       delete rawAmounts[k]
@@ -170,6 +199,8 @@ function toggleMany(keys: string[], on: boolean) {
       <div class="cols" aria-hidden="true">
         <span />
         <span class="yen">予算額</span>
+        <span>数量</span>
+        <span>取引先</span>
         <span class="yen">執行額（実際の金額）</span>
         <span />
       </div>
@@ -182,6 +213,8 @@ function toggleMany(keys: string[], on: boolean) {
             <span class="scope" :class="{ whole: g.whole }">{{ g.whole ? `款ごと（全${g.inKan}件）` : `${g.items.length} / ${g.inKan}件` }}</span>
           </span>
           <span class="yen">{{ formatYen(g.total) }}</span>
+          <span class="spacer" />
+          <span class="spacer" />
           <span class="yen"><strong>{{ formatYen(g.actual) }}</strong></span>
           <button type="button" class="link" :aria-label="`款「${g.kan}」の選択をすべて外す`" @click="toggleMany(g.items.map(i => i.line.key), false)">まとめて外す</button>
         </header>
@@ -193,6 +226,29 @@ function toggleMany(keys: string[], on: boolean) {
               <span class="name">{{ i.name }}</span>
             </span>
             <span class="yen">{{ formatYen(i.line.budgetAmount) }}</span>
+            <span class="text-cell">
+              <input
+                type="text"
+                autocomplete="off"
+                :value="currentQuantities[i.line.key] ?? ''"
+                :aria-label="`${i.line.label} の数量`"
+                :placeholder="i.line.quantity ? '' : '数量'"
+                @input="setQuantity(i.line.key, ($event.target as HTMLInputElement).value)"
+              >
+              <small v-if="(currentQuantities[i.line.key] ?? '') !== i.line.quantity" class="diff">予算: {{ i.line.quantity || 'なし' }}</small>
+            </span>
+            <span class="text-cell">
+              <input
+                type="text"
+                autocomplete="off"
+                list="vendor-suggestions"
+                :value="currentVendors[i.line.key] ?? ''"
+                :aria-label="`${i.line.label} の取引先`"
+                :placeholder="i.line.vendor ? '' : '取引先'"
+                @input="setVendor(i.line.key, ($event.target as HTMLInputElement).value)"
+              >
+              <small v-if="(currentVendors[i.line.key] ?? '') !== i.line.vendor" class="diff">予算: {{ i.line.vendor || 'なし' }}</small>
+            </span>
             <span class="amount">
               <input
                 type="text"
@@ -212,6 +268,10 @@ function toggleMany(keys: string[], on: boolean) {
           </li>
         </ul>
       </section>
+      <!-- 取引先の入力候補（予算に出てくる取引先） -->
+      <datalist id="vendor-suggestions">
+        <option v-for="v in vendorSuggestions" :key="v" :value="v" />
+      </datalist>
     </div>
 
     <label class="search">絞り込み<input v-model="query" type="search" placeholder="例: インク / out-03-02 / ASKUL"></label>
@@ -264,22 +324,25 @@ function toggleMany(keys: string[], on: boolean) {
 }
 .picked { border: 1px solid var(--accent); border-radius: 6px; padding: .5rem .75rem; display: grid; gap: .5rem; }
 .picked-head { display: flex; justify-content: space-between; gap: 1rem; font-size: .9rem; }
-/* 名前 | 予算額 | 執行額 | 操作 の4列をそろえる */
-.cols, .kan-head, .picked li { display: grid; grid-template-columns: 1fr 6.5rem 9.5rem 5.5rem; gap: .5rem; align-items: baseline; }
+/* 名前 | 予算額 | 数量 | 取引先 | 執行額 | 操作 の6列をそろえる */
+.cols, .kan-head, .picked li { display: grid; grid-template-columns: minmax(12rem, 1fr) 6rem 6.5rem 8.5rem 8.5rem 5rem; gap: .5rem; align-items: baseline; }
 .cols { font-size: .72rem; color: var(--muted); padding-left: calc(4px + .6rem + .4rem + .5rem + 1px); }
 .kan-group { border-left: 4px solid var(--stripe-kan); padding-left: .6rem; }
 .kan-head { font-size: .88rem; padding: .15rem 0; }
 .kan-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; min-width: 0; }
-.amount { display: grid; gap: .1rem; }
+.amount, .text-cell { display: grid; gap: .1rem; min-width: 0; }
+.text-cell input { padding: .2rem .4rem; }
 .amount input { padding: .2rem .4rem; text-align: right; font-variant-numeric: tabular-nums; }
 .diff { font-size: .72rem; color: var(--muted); text-align: right; }
 .amount input.invalid { border-color: var(--danger); }
 .amount .error { font-size: .72rem; text-align: right; }
 .warn { color: var(--danger); }
-@media (max-width: 640px) {
-  .cols { display: none; }
-  .kan-head, .picked li { grid-template-columns: 1fr auto; }
-  .kan-head .link, .picked li .link { grid-column: 2; }
+@media (max-width: 900px) {
+  /* 狭い画面では名前を1行目に出し、入力欄を2つずつ並べる */
+  .cols, .spacer { display: none; }
+  .kan-head, .picked li { grid-template-columns: 1fr 1fr; }
+  .kan-title, .picked li .label { grid-column: 1 / -1; }
+  .picked li { padding-bottom: .4rem; border-bottom: 1px dashed var(--border); }
 }
 .scope { font-size: .75rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 .5em; }
 .scope.whole { color: var(--accent); border-color: var(--accent); font-weight: 600; }
