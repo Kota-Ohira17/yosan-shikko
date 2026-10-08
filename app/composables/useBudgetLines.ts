@@ -1,3 +1,5 @@
+import { budgetChangeOf, bureauCodeOf } from '#shared/constants'
+
 /** 予算明細（全件）。フォームと選択部品で同じデータを共有する */
 export function useBudgetLines() {
   return useFetch('/api/budget-lines', { key: 'budget-lines', default: () => [] })
@@ -8,13 +10,34 @@ export type BudgetLineView = NonNullable<ReturnType<typeof useBudgetLines>['data
 export const formatYen = (n: number | null | undefined) =>
   n == null ? '' : `${n < 0 ? '-' : ''}¥${Math.abs(n).toLocaleString('ja-JP')}`
 
-/** 執行項目を選んだとき、局が未入力なら最初の明細の局を入れる */
+/** 執行項目を選んだとき、局が未入力なら最初の明細の局（略称）を入れる */
 export function useBureauFromItems(keys: Ref<string[]>, department: Ref<string>) {
   const { data: lines } = useBudgetLines()
   watch(keys, (k) => {
     if (department.value || !k.length) return
-    department.value = lines.value.find(l => l.key === k[0])?.bureau ?? ''
+    department.value = bureauCodeOf(lines.value.find(l => l.key === k[0])?.bureau ?? '')
   })
+}
+
+/**
+ * 「補正予算からの変更」を、執行額の合計と予算額の合計から自動で選ぶ。手で選び直したら以降は上書きしない。
+ * 戻り値は選択欄の変更時に呼ぶ関数。
+ */
+export function useBudgetChangeFromItems(
+  keys: Ref<string[]>,
+  amounts: Ref<Record<string, number | ''>>,
+  budgetChange: Ref<string>,
+) {
+  const { data: lines } = useBudgetLines()
+  const edited = ref(false)
+  watch([keys, amounts], ([k, a]) => {
+    if (edited.value || !k.length) return
+    const byKey = new Map(lines.value.map(l => [l.key, l]))
+    const budget = k.reduce((s, key) => s + (byKey.get(key)?.budgetAmount ?? 0), 0)
+    const actual = k.reduce((s, key) => s + (typeof a[key] === 'number' ? a[key] as number : byKey.get(key)?.budgetAmount ?? 0), 0)
+    budgetChange.value = budgetChangeOf(actual, budget)
+  }, { deep: true })
+  return () => { edited.value = true }
 }
 
 /** 送信用に、未入力（''）の執行額を取り除く */

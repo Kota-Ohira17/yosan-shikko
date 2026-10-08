@@ -38,7 +38,10 @@ watch(useManual, (m) => {
   <div class="items">
     <template v-if="useManual">
       <p v-if="!hasBudget" class="hint">予算がまだ取り込まれていないので、項目番号を手入力してください。</p>
-      <label>項目番号<input v-model="itemNumber" placeholder="out-03-02-06" required></label>
+      <label>項目番号
+        <span class="hint">項目番号は「out-AA-BB（-CC）」の形式で表されます。款でまとめて申請を行う場合はCCを含めなくて大丈夫です。outも含めてすべて半角で入力してください。</span>
+        <input v-model="itemNumber" placeholder="out-03-02-06" required>
+      </label>
     </template>
     <BudgetPicker v-else v-model="keys" v-model:amounts="amounts" />
 

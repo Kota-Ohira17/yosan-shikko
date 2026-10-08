@@ -1,11 +1,14 @@
 import { z } from 'zod'
-import { TRANSFER_BANKS } from './constants'
+import { BUDGET_CHANGES, BUREAUS, PAPER_RECEIPT, TRANSFER_BANKS } from './constants'
 
 const required = (label: string) => {
   const message = `${label}を入力してください`
   return z.string({ error: message }).trim().min(1, message)
 }
 const date = z.string({ error: '日付を入力してください' }).regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください')
+/** 日付、または日付＋時刻（執行希望日時） */
+const dateTime = z.string({ error: '日時を入力してください' }).regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/, '日時を入力してください')
+const bureau = z.enum(BUREAUS.map(b => b.code) as [string, ...string[]], { error: '局を選んでください' })
 const yen = z.coerce.number({ error: '金額を数字で入力してください' }).int('整数で入力してください').positive('金額を入力してください')
 
 export const ITEM_NUMBER_PATTERN = /^out-\d{2}(-\d{2}){1,2}$/
@@ -34,18 +37,18 @@ function checkItems(v: { budgetLineKeys: string[], itemNumber: string }, ctx: z.
 
 const base = z.object({
   applicantName: required('申請者氏名'),
-  department: required('局'),
+  department: bureau,
   inCharge: required('担当名'),
   ...items,
   itemName: required('支出項目名'),
-  budgetChange: z.enum(['変動なし', '増額', '減額'], { error: '補正予算からの変更を選んでください' }),
+  budgetChange: z.enum(BUDGET_CHANGES, { error: '補正予算からの変更を選んでください' }),
   remark: z.string().trim().default(''),
 })
 
 export const bankAccountSchema = z.object({
   bankName: required('金融機関名'),
   branchName: required('支店名'),
-  accountType: z.enum(['普通', '当座']),
+  accountType: required('振込先の口座種別'), // 普通 / 当座 / その他（自由記述）
   accountNumber: z.string().regex(/^\d{1,8}$/, '口座番号は数字で入力してください'),
   accountName: required('口座名義'),
 }, { error: '振込先の口座情報を入力してください' })
@@ -60,7 +63,7 @@ export const executionRequestSchema = z.discriminatedUnion('type', [
   base.extend({
     type: z.literal('発注'),
     site: required('通販サイト'),
-    url: z.url('商品ページのURLを入力してください'),
+    url: required('商品ページのリンク'), // 複数のリンクを改行で書いてよい
     quantity: required('数量'),
     deadline: date,
     deliveryPlace: required('配達場所'),
@@ -69,21 +72,28 @@ export const executionRequestSchema = z.discriminatedUnion('type', [
     type: z.literal('立替'),
     amount: yen,
     purchase: required('購入先'),
-    paperReceipt: z.enum(['あり', 'なし']),
+    paperReceipt: z.enum(PAPER_RECEIPT, { error: '紙媒体の領収証の有無を選んでください' }),
     deadline: date, // 立替予定日
   }),
   base.extend({
     type: z.enum(['現金執行', 'カード決済', 'その他']),
+    /** 執行形態で「その他」を選んだときの中身 */
+    otherMethod: z.string().trim().default(''),
     amount: yen,
-    deadline: date, // 執行希望日
+    deadline: dateTime, // 執行希望日時
     details: required('詳細'),
   }),
-]).superRefine(checkItems)
+]).superRefine((v, ctx) => {
+  checkItems(v, ctx)
+  if (v.type === 'その他' && !v.otherMethod) {
+    ctx.addIssue({ code: 'custom', message: '執行形態（その他）の内容を入力してください', path: ['otherMethod'] })
+  }
+})
 export type ExecutionRequestInput = z.input<typeof executionRequestSchema>
 
 export const evidenceSchema = z.object({
   advancedName: required('立替者氏名'),
-  department: required('局'),
+  department: bureau,
   inCharge: required('担当名'),
   ...items,
   itemName: required('支出項目名（内訳）'),

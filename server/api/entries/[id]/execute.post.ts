@@ -8,6 +8,7 @@ function paymentMethodFor(entry: Entry, bank?: string) {
     case '振込': return `振込（${bank}）`
     case '発注': return '口座引落'
     case 'カード決済': return 'デビット（MUFG）'
+    case 'その他': return entry.details.otherMethod ? `その他（${entry.details.otherMethod}）` : 'その他'
     default: return entry.type
   }
 }

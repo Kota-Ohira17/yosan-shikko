@@ -20,11 +20,12 @@ type Row = NonNullable<typeof entries.value>[number]
 const DETAIL_LABELS: Record<string, string> = {
   budgetChange: '補正予算からの変更',
   site: '通販サイト',
-  url: '商品ページ',
+  url: '商品ページのリンク',
   deliveryPlace: '配達場所',
   purchase: '購入先',
   paperReceipt: '紙の領収証',
   details: '詳細',
+  otherMethod: '執行形態（その他）',
   kindOfEvidence: '証憑の種類',
   refundTiming: '返金時期',
   bankName: '金融機関名',
@@ -37,8 +38,13 @@ const DETAIL_LABELS: Record<string, string> = {
 function detailRows(row: Row) {
   const { bank, ...rest } = row.details as Record<string, unknown>
   return Object.entries({ ...rest, ...(bank as object | undefined) })
+    .filter(([, v]) => v !== '' && v != null)
     .map(([k, v]) => ({ label: DETAIL_LABELS[k] ?? k, value: String(v), isUrl: k === 'url' }))
 }
+
+/** 商品ページのリンク（改行・空白区切りで複数あり得る） */
+const splitLinks = (v: string) => v.split(/\s+/).filter(Boolean)
+const isLink = (u: string) => /^https?:\/\//.test(u)
 
 const yen = (n: number | null) => (n == null ? '' : `${n.toLocaleString('ja-JP')}円`)
 const dateTime = (s: string | Date | null) => (s ? new Date(s).toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' }) : '')
@@ -196,7 +202,11 @@ async function setDone(row: Row, done: boolean) {
                   <template v-for="d in detailRows(row)" :key="d.label">
                     <dt>{{ d.label }}</dt>
                     <dd>
-                      <a v-if="d.isUrl" :href="d.value" target="_blank" rel="noopener">{{ d.value }}</a>
+                      <template v-if="d.isUrl">
+                        <template v-for="(u, n) in splitLinks(d.value)" :key="n">
+                          <a v-if="isLink(u)" :href="u" target="_blank" rel="noopener">{{ u }}</a><span v-else>{{ u }}</span><br>
+                        </template>
+                      </template>
                       <template v-else>{{ d.value }}</template>
                     </dd>
                   </template>
