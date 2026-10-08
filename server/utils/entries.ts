@@ -16,22 +16,43 @@ export async function resolveBudgetLines(keys: string[], manualItemNumber: strin
   return { itemNumber: [...new Set(lines.map(l => l.itemNumber))].join(', '), lines }
 }
 
-/** 申請と、選ばれた予算明細のコピーを1トランザクションで保存する */
-export async function insertEntry(values: typeof schema.entries.$inferInsert, lines: BudgetLine[]) {
+/**
+ * 申請と、選ばれた予算明細のコピー（明細ごとの執行額つき）を1トランザクションで保存する。
+ * 金額欄のない申請（発注など）で執行額が入っていれば、その合計を申請の金額にする。
+ */
+export async function insertEntry(
+  values: typeof schema.entries.$inferInsert,
+  lines: BudgetLine[],
+  itemAmounts: Record<string, number> = {},
+) {
+  const actuals = lines.map(l => itemAmounts[l.key] ?? null)
+  if (values.amount == null && lines.length && actuals.every(a => a != null)) {
+    values = { ...values, amount: actuals.reduce((s, a) => s! + a!, 0) }
+  }
   return useDb().transaction(async (tx) => {
     const [entry] = await tx.insert(schema.entries).values(values).returning()
     const items = lines.length
-      ? await tx.insert(schema.entryItems).values(lines.map(l => ({
+      ? await tx.insert(schema.entryItems).values(lines.map((l, i) => ({
           entryId: entry!.id,
           lineKey: l.key,
           itemNumber: l.itemNumber,
           label: l.label,
           quantity: l.quantity,
           budgetAmount: l.budgetAmount,
+          actualAmount: actuals[i],
         }))).returning()
       : []
     return { ...entry!, items }
   })
+}
+
+/**
+ * 明細ごとの実際の執行額。入力があればそれ、なければ
+ * 明細が1件だけの申請なら申請の金額をそのまま使う（複数明細で未入力なら不明＝null）。
+ */
+export function actualAmountOf(item: EntryItem, entry: Entry & { items: EntryItem[] }) {
+  if (item.actualAmount != null) return item.actualAmount
+  return entry.items.length === 1 ? entry.amount : null
 }
 
 /** 一覧に予算明細を付ける */

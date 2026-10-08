@@ -17,9 +17,52 @@ export function useBureauFromItems(keys: Ref<string[]>, department: Ref<string>)
   })
 }
 
-/** 選んだ明細から支出項目名を作る（例: 「インク代 / PFIー120M マゼンタ ほか1件」） */
-export function itemNameFromLines(lines: BudgetLineView[]) {
-  if (!lines.length) return ''
+/** 送信用に、未入力（''）の執行額を取り除く */
+export function filledAmounts(amounts: Record<string, number | ''>) {
+  return Object.fromEntries(Object.entries(amounts).filter((e): e is [string, number] => e[1] !== ''))
+}
+
+/**
+ * 明細ごとの執行額の合計を、申請の金額欄に自動で入れる。金額欄を手で直したら以降は上書きしない。
+ * 戻り値は金額欄の @input に付ける関数。
+ */
+export function useTotalFromItems(amounts: Ref<Record<string, number | ''>>, total: Ref<string | number>) {
+  const edited = ref(false)
+  watch(amounts, (a) => {
+    const values = Object.values(a)
+    if (edited.value || !values.length || values.some(v => v === '')) return
+    total.value = String((values as number[]).reduce((s, v) => s + v, 0))
+  }, { deep: true })
+  return () => { edited.value = true }
+}
+
+/** 款・項・目・節のまとまり。上の階層から順に「まるごと選ばれているか」を調べる */
+const GROUPINGS: { key: (l: BudgetLineView) => string, name: (l: BudgetLineView) => string }[] = [
+  { key: l => (l.kan ? `${l.kanNo}|${l.kan}` : ''), name: l => l.kan },
+  { key: l => (l.kou ? `${l.kanNo}|${l.kan}|${l.kouNo}|${l.kou}` : ''), name: l => l.kou },
+  { key: l => (l.moku ? `${l.kanNo}|${l.kan}|${l.kouNo}|${l.kou}|${l.moku}` : ''), name: l => l.moku },
+  { key: l => (l.setsu ? `${l.kanNo}|${l.kan}|${l.kouNo}|${l.kou}|${l.moku}|${l.setsu}` : ''), name: l => l.setsu },
+]
+
+/**
+ * 選んだ明細から支出項目名を作る。
+ * - 款（または項・目・節）をまるごと選んでいるときは、その名前（例: 「委員会設備等関連費」）。
+ *   款を複数まるごと選んでいるときは「手数料・委員会設備等関連費」
+ * - それ以外は最初の明細の名前（例: 「インク代 / PFIー120M マゼンタ ほか1件」）
+ */
+export function itemNameFromLines(selected: BudgetLineView[], all: BudgetLineView[]) {
+  if (!selected.length) return ''
+  const picked = new Set(selected.map(l => l.key))
+  for (const [level, g] of GROUPINGS.entries()) {
+    const groups = new Set(selected.map(g.key))
+    if (groups.has('')) continue
+    // 名前を「・」でつなぐのは款だけ（項・目・節は1つをまるごと選んだときだけその名前にする）
+    if (level > 0 && groups.size > 1) continue
+    const members = all.filter(l => groups.has(g.key(l)))
+    if (members.length === picked.size && members.every(l => picked.has(l.key))) {
+      return [...new Set(selected.map(g.name))].join('・')
+    }
+  }
   const last = (l: BudgetLineView) => l.label.split(' / ').slice(-2).join(' / ')
-  return lines.length === 1 ? last(lines[0]!) : `${last(lines[0]!)} ほか${lines.length - 1}件`
+  return selected.length === 1 ? last(selected[0]!) : `${last(selected[0]!)} ほか${selected.length - 1}件`
 }

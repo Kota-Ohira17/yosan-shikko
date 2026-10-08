@@ -43,6 +43,13 @@
       "when": 1791386412656,
       "tag": "0005_two_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791419475703,
+      "tag": "0006_actual_amount",
+      "breakpoints": true
     }
   ]
 }

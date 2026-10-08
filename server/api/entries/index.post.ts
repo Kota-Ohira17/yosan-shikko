@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const input = parseOr400(executionRequestSchema.safeParse(payload))
 
   const {
-    type, applicantName, department, inCharge, budgetLineKeys, itemNumber: manualItemNumber, itemName, remark, deadline,
+    type, applicantName, department, inCharge, budgetLineKeys, itemAmounts: _itemAmounts, itemNumber: manualItemNumber, itemName, remark, deadline,
     ...rest
   } = input
   const { amount, quantity, ...details } = rest as typeof rest & { amount?: number, quantity?: string }
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
     remark,
     details,
     attachmentId,
-  }, lines)
+  }, lines, input.itemAmounts)
 
   await notifyN8n('created', entry)
   setResponseStatus(event, 201)

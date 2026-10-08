@@ -15,9 +15,16 @@ export const ITEM_NUMBER_PATTERN = /^out-\d{2}(-\d{2}){1,2}$/
  * どちらか一方が必要（checkItems で検証）。
  */
 const items = {
-  budgetLineKeys: z.array(z.string()).max(50, '選べる明細は50件までです').default([]),
+  budgetLineKeys: z.array(z.string()).max(200, '選べる明細は200件までです').default([]),
+  /** 明細ごとの実際の執行額（明細の key → 円）。予算額と違うことが多い */
+  itemAmounts: z.record(z.string(), z.coerce.number({ error: '執行額は数字で入力してください' }).int('執行額は整数で入力してください')).default({}),
   itemNumber: z.string().trim().default(''),
 }
+
+/** 台帳で明細ごとの執行額を直す（entry_items の id → 円。null で未入力に戻す） */
+export const itemAmountsUpdateSchema = z.object({
+  amounts: z.record(z.string(), z.number().int('執行額は整数で入力してください').nullable()),
+})
 
 function checkItems(v: { budgetLineKeys: string[], itemNumber: string }, ctx: z.RefinementCtx) {
   if (v.budgetLineKeys.length) return

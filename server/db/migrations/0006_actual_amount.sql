@@ -1,0 +1,1 @@
+ALTER TABLE `entry_items` ADD `actual_amount` integer;

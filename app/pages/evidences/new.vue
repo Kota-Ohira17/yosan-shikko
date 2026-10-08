@@ -7,6 +7,7 @@ const form = reactive({
   department: '',
   inCharge: '',
   budgetLineKeys: [] as string[],
+  itemAmounts: {} as Record<string, number | ''>,
   itemNumber: '',
   itemName: '',
   quantity: '',
@@ -17,10 +18,11 @@ const form = reactive({
 })
 const file = ref<File | null>(null)
 useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
+const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 'amount'))
 const done = ref<string>()
 
 async function onSubmit() {
-  const result = await submit(form, file.value)
+  const result = await submit({ ...form, itemAmounts: filledAmounts(form.itemAmounts) }, file.value)
   if (result) done.value = result.seq
 }
 </script>
@@ -44,6 +46,7 @@ async function onSubmit() {
         <legend>支出項目（複数選択可）</legend>
         <ExpenseItemsField
           v-model:keys="form.budgetLineKeys"
+          v-model:amounts="form.itemAmounts"
           v-model:item-number="form.itemNumber"
           v-model:item-name="form.itemName"
           item-name-label="支出項目名（内訳）"
@@ -58,7 +61,7 @@ async function onSubmit() {
         </label>
         <label>立替日付<input v-model="form.payDate" type="date" required></label>
       </div>
-      <label>立替金額（円）<input v-model="form.amount" type="number" min="1" required></label>
+      <label>立替金額（円）<input v-model="form.amount" type="number" min="1" required @input="onAmountInput"></label>
       <label>証憑ファイル<input type="file" accept="application/pdf,image/*" required @change="file = ($event.target as HTMLInputElement).files?.[0] ?? null"></label>
       <label>返金時期
         <select v-model="form.refundTiming"><option>委員返金と同時</option><option>できる限り早く</option></select>

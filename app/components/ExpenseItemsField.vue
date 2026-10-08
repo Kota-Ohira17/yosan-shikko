@@ -3,8 +3,10 @@
  * 執行項目の入力欄（執行依頼・証憑提出で共通）。
  * 予算明細から複数選ぶのが基本で、予算にない項目は項目番号を手入力できる。
  * 支出項目名は選んだ明細から自動で入れる（手で直したらそれ以降は上書きしない）。
+ * 明細ごとの実際の執行額は v-model:amounts（明細の key → 円）。
  */
 const keys = defineModel<string[]>('keys', { required: true })
+const amounts = defineModel<Record<string, number | ''>>('amounts', { required: true })
 const itemNumber = defineModel<string>('itemNumber', { required: true })
 const itemName = defineModel<string>('itemName', { required: true })
 defineProps<{ itemNameLabel: string }>()
@@ -19,12 +21,15 @@ const useManual = computed(() => manual.value || !hasBudget.value)
 watch(keys, (k) => {
   if (nameEdited.value) return
   const byKey = new Map(lines.value.map(l => [l.key, l]))
-  itemName.value = itemNameFromLines(k.map(key => byKey.get(key)).filter(l => l != null))
+  itemName.value = itemNameFromLines(k.map(key => byKey.get(key)).filter(l => l != null), lines.value)
 })
 
 watch(useManual, (m) => {
   // 切り替えたらもう一方の入力は送らない
-  if (m) keys.value = []
+  if (m) {
+    keys.value = []
+    amounts.value = {}
+  }
   else itemNumber.value = ''
 })
 </script>
@@ -35,7 +40,7 @@ watch(useManual, (m) => {
       <p v-if="!hasBudget" class="hint">予算がまだ取り込まれていないので、項目番号を手入力してください。</p>
       <label>項目番号<input v-model="itemNumber" placeholder="out-03-02-06" required></label>
     </template>
-    <BudgetPicker v-else v-model="keys" />
+    <BudgetPicker v-else v-model="keys" v-model:amounts="amounts" />
 
     <button v-if="hasBudget" type="button" class="link" @click="manual = !manual">
       {{ manual ? '予算から選ぶ' : '予算にない項目を手入力する' }}

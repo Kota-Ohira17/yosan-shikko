@@ -97,6 +97,8 @@ export const entryItems = sqliteTable('entry_items', {
   label: text('label').notNull(),
   quantity: text('quantity').notNull().default(''),
   budgetAmount: integer('budget_amount').notNull(),
+  /** 実際の執行額（予算額から変わることが多い）。未入力なら null */
+  actualAmount: integer('actual_amount'),
 })
 
 export type BudgetLine = typeof budgetLines.$inferSelect

@@ -10,6 +10,7 @@ const form = reactive({
   department: '',
   inCharge: '',
   budgetLineKeys: [] as string[],
+  itemAmounts: {} as Record<string, number | ''>,
   itemNumber: '',
   itemName: '',
   budgetChange: '変動なし',
@@ -31,6 +32,7 @@ const form = reactive({
 })
 const file = ref<File | null>(null)
 useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
+const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 'amount'))
 const confirmed = ref(false)
 const done = ref<string>()
 
@@ -48,6 +50,7 @@ function buildPayload() {
     department: form.department,
     inCharge: form.inCharge,
     budgetLineKeys: form.budgetLineKeys,
+    itemAmounts: filledAmounts(form.itemAmounts),
     itemNumber: form.itemNumber,
     itemName: form.itemName,
     budgetChange: form.budgetChange,
@@ -101,6 +104,7 @@ async function onSubmit() {
         <legend>執行項目（複数選択可）</legend>
         <ExpenseItemsField
           v-model:keys="form.budgetLineKeys"
+          v-model:amounts="form.itemAmounts"
           v-model:item-number="form.itemNumber"
           v-model:item-name="form.itemName"
           item-name-label="支出項目名"
@@ -112,7 +116,7 @@ async function onSubmit() {
 
         <template v-if="form.type === '振込'">
           <label>請求書（ある場合）<input type="file" accept="application/pdf,image/*" @change="file = ($event.target as HTMLInputElement).files?.[0] ?? null"></label>
-          <label>振込金額（円）<input v-model="form.amount" type="number" min="1" required></label>
+          <label>振込金額（円）<input v-model="form.amount" type="number" min="1" required @input="onAmountInput"></label>
           <div class="row">
             <label>金融機関名<input v-model="form.bank.bankName" required></label>
             <label>支店名・出張所名<input v-model="form.bank.branchName" required></label>
@@ -137,7 +141,7 @@ async function onSubmit() {
         </template>
 
         <template v-else-if="form.type === '立替'">
-          <label>立替合計金額（円）<input v-model="form.amount" type="number" min="1" required></label>
+          <label>立替合計金額（円）<input v-model="form.amount" type="number" min="1" required @input="onAmountInput"></label>
           <label>購入先<input v-model="form.purchase" required></label>
           <label>紙の領収証
             <select v-model="form.paperReceipt"><option>あり</option><option>なし</option></select>
@@ -146,7 +150,7 @@ async function onSubmit() {
         </template>
 
         <template v-else>
-          <label>金額（円）<input v-model="form.amount" type="number" min="1" required></label>
+          <label>金額（円）<input v-model="form.amount" type="number" min="1" required @input="onAmountInput"></label>
           <label>詳細<textarea v-model="form.details" rows="3" required /></label>
         </template>
 

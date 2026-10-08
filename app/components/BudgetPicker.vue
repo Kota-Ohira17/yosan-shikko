@@ -1,6 +1,10 @@
 <script setup lang="ts">
-/** 予算明細をスプレッドシートと同じ形の表から複数選ぶ。v-model は明細の key の配列 */
+/**
+ * 予算明細をスプレッドシートと同じ形の表から複数選ぶ。v-model は明細の key の配列。
+ * v-model:amounts は明細ごとの実際の執行額（選んだときは予算額が入り、違うところだけ直す）。
+ */
 const selected = defineModel<string[]>({ required: true })
+const amounts = defineModel<Record<string, number | ''>>('amounts', { default: () => ({}) })
 const { data: lines } = await useBudgetLines()
 
 const query = ref('')
@@ -11,9 +15,42 @@ const bureaus = computed(() => [...new Set(lines.value.map(l => l.bureau).filter
 const current = ref<string[]>([...selected.value])
 watch(selected, (v) => { current.value = [...v] })
 
+const currentAmounts = ref<Record<string, number | ''>>({ ...amounts.value })
+watch(amounts, (v) => { currentAmounts.value = { ...v } })
+
 const byKey = computed(() => new Map(lines.value.map(l => [l.key, l])))
 const selectedLines = computed(() => current.value.map(k => byKey.value.get(k)).filter(l => l != null))
 const selectedTotal = computed(() => selectedLines.value.reduce((s, l) => s + l.budgetAmount, 0))
+
+/** 執行額（未入力は予算額のまま扱わず、合計に含めない） */
+const actualOf = (key: string) => {
+  const v = currentAmounts.value[key]
+  return v === '' || v == null ? null : v
+}
+const sumActual = (keys: string[]) => keys.reduce((s, k) => s + (actualOf(k) ?? 0), 0)
+const actualTotal = computed(() => sumActual(current.value))
+const missingActual = computed(() => current.value.filter(k => actualOf(k) == null).length)
+
+function setAmount(key: string, raw: string) {
+  const n = raw.trim() === '' ? '' : Math.trunc(Number(raw))
+  currentAmounts.value = { ...currentAmounts.value, [key]: Number.isNaN(n) ? '' : n }
+  amounts.value = currentAmounts.value
+}
+
+/** 選択の変化に合わせて執行額をそろえる（新しく選んだ明細には予算額を入れておく） */
+function syncAmounts() {
+  const next: Record<string, number | ''> = {}
+  for (const k of current.value) next[k] = k in currentAmounts.value ? currentAmounts.value[k]! : (byKey.value.get(k)?.budgetAmount ?? '')
+  currentAmounts.value = next
+  amounts.value = next
+}
+
+const diffLabel = (key: string, budget: number) => {
+  const a = actualOf(key)
+  if (a == null || a === budget) return ''
+  const d = a - budget
+  return `予算比 ${d > 0 ? '+' : '-'}¥${Math.abs(d).toLocaleString('ja-JP')}`
+}
 
 /**
  * 選択中の明細を款ごとにまとめ、款の下の階層（項 › 目）を添えて表示する。
@@ -34,6 +71,7 @@ const selectedByKan = computed(() => {
       whole: items.length === inKan,
       inKan,
       total: items.reduce((s, l) => s + l.budgetAmount, 0),
+      actual: sumActual(items.map(l => l.key)),
       items: items.map((l) => {
         const parts = l.label.split(' / ')
         // ラベルの先頭は「項（なければ款）」。款は見出しに出すので重ねない
@@ -58,6 +96,7 @@ function toggle(key: string) {
     ? current.value.filter(k => k !== key)
     : [...current.value, key]
   selected.value = current.value
+  syncAmounts()
 }
 
 function toggleMany(keys: string[], on: boolean) {
@@ -65,6 +104,7 @@ function toggleMany(keys: string[], on: boolean) {
     ? [...current.value, ...keys.filter(k => !current.value.includes(k))]
     : current.value.filter(k => !keys.includes(k))
   selected.value = current.value
+  syncAmounts()
 }
 </script>
 
@@ -73,15 +113,27 @@ function toggleMany(keys: string[], on: boolean) {
     <div v-if="selectedLines.length" class="picked">
       <div class="picked-head">
         <strong>選択中 {{ selectedLines.length }}件</strong>
-        <span>予算額 合計 {{ formatYen(selectedTotal) }}</span>
+        <span>
+          予算額 {{ formatYen(selectedTotal) }} ／ <strong>執行額 {{ formatYen(actualTotal) }}</strong>
+          <small v-if="missingActual" class="warn">（執行額未入力 {{ missingActual }}件）</small>
+        </span>
+      </div>
+      <div class="cols" aria-hidden="true">
+        <span />
+        <span class="yen">予算額</span>
+        <span class="yen">執行額（実際の金額）</span>
+        <span />
       </div>
       <section v-for="g in selectedByKan" :key="g.key" class="kan-group">
         <header class="kan-head">
-          <span class="lv-badge kan">款</span>
-          <span class="num">{{ g.kanNo }}</span>
-          <strong class="kan-name">{{ g.kan }}</strong>
-          <span class="scope" :class="{ whole: g.whole }">{{ g.whole ? `款ごと（全${g.inKan}件）` : `${g.items.length} / ${g.inKan}件` }}</span>
+          <span class="kan-title">
+            <span class="lv-badge kan">款</span>
+            <span class="num">{{ g.kanNo }}</span>
+            <strong class="kan-name">{{ g.kan }}</strong>
+            <span class="scope" :class="{ whole: g.whole }">{{ g.whole ? `款ごと（全${g.inKan}件）` : `${g.items.length} / ${g.inKan}件` }}</span>
+          </span>
           <span class="yen">{{ formatYen(g.total) }}</span>
+          <span class="yen"><strong>{{ formatYen(g.actual) }}</strong></span>
           <button type="button" class="link" :aria-label="`款「${g.kan}」の選択をすべて外す`" @click="toggleMany(g.items.map(i => i.line.key), false)">まとめて外す</button>
         </header>
         <ul>
@@ -92,6 +144,18 @@ function toggleMany(keys: string[], on: boolean) {
               <span class="name">{{ i.name }}</span>
             </span>
             <span class="yen">{{ formatYen(i.line.budgetAmount) }}</span>
+            <span class="amount">
+              <input
+                type="number"
+                inputmode="numeric"
+                step="1"
+                :value="currentAmounts[i.line.key]"
+                :aria-label="`${i.line.label} の執行額`"
+                placeholder="未入力"
+                @input="setAmount(i.line.key, ($event.target as HTMLInputElement).value)"
+              >
+              <small v-if="diffLabel(i.line.key, i.line.budgetAmount)" class="diff">{{ diffLabel(i.line.key, i.line.budgetAmount) }}</small>
+            </span>
             <button type="button" class="link" :aria-label="`${i.line.label} を外す`" @click="toggle(i.line.key)">外す</button>
           </li>
         </ul>
@@ -140,13 +204,25 @@ function toggleMany(keys: string[], on: boolean) {
 }
 .picked { border: 1px solid var(--accent); border-radius: 6px; padding: .5rem .75rem; display: grid; gap: .5rem; }
 .picked-head { display: flex; justify-content: space-between; gap: 1rem; font-size: .9rem; }
+/* 名前 | 予算額 | 執行額 | 操作 の4列をそろえる */
+.cols, .kan-head, .picked li { display: grid; grid-template-columns: 1fr 6.5rem 9.5rem 5.5rem; gap: .5rem; align-items: baseline; }
+.cols { font-size: .72rem; color: var(--muted); padding-left: calc(4px + .6rem + .4rem + .5rem + 1px); }
 .kan-group { border-left: 4px solid var(--stripe-kan); padding-left: .6rem; }
-.kan-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; font-size: .88rem; padding: .15rem 0; }
-.kan-name { flex: 1 1 8rem; }
+.kan-head { font-size: .88rem; padding: .15rem 0; }
+.kan-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; min-width: 0; }
+.amount { display: grid; gap: .1rem; }
+.amount input { padding: .2rem .4rem; text-align: right; font-variant-numeric: tabular-nums; }
+.diff { font-size: .72rem; color: var(--muted); text-align: right; }
+.warn { color: var(--danger); }
+@media (max-width: 640px) {
+  .cols { display: none; }
+  .kan-head, .picked li { grid-template-columns: 1fr auto; }
+  .kan-head .link, .picked li .link { grid-column: 2; }
+}
 .scope { font-size: .75rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 .5em; }
 .scope.whole { color: var(--accent); border-color: var(--accent); font-weight: 600; }
 .picked ul { list-style: none; margin: 0; padding: 0 0 0 .4rem; display: grid; gap: .15rem; border-left: 1px dashed var(--border); }
-.picked li { display: grid; grid-template-columns: 1fr auto auto; gap: .5rem; align-items: baseline; font-size: .85rem; padding-left: .5rem; }
+.picked li { font-size: .85rem; padding-left: .5rem; }
 .trail { color: var(--muted); }
 .name { font-weight: 500; }
 .num { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; margin-right: .3rem; }
