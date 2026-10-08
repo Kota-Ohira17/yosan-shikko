@@ -50,7 +50,7 @@ const base = z.object({
   inCharge: required('担当名'),
   ...items,
   itemName: required('支出項目名'),
-  budgetChange: z.enum(BUDGET_CHANGES, { error: '補正予算からの変更を選んでください' }),
+  budgetChange: z.enum(BUDGET_CHANGES, { error: '予算からの変更を選んでください' }),
   remark: z.string().trim().default(''),
 })
 

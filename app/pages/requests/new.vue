@@ -49,6 +49,7 @@ const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 
 const onBudgetChangeInput = useBudgetChangeFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemAmounts'), toRef(form, 'budgetChange'))
 
 const { data: budgetLines } = useBudgetLines()
+const budgetKind = useBudgetKind()
 /** 予算の明細を選んでいるか（選んでいれば、金額・数量・取引先は形態ごとの欄で明細ごとに入力する） */
 const hasItems = computed(() => form.budgetLineKeys.length > 0)
 /** 明細ごとの欄に出す列。発注の取引先は通販サイト、立替は購入先なので出さない */
@@ -161,7 +162,7 @@ async function onSubmit() {
 
         <div class="block">
           <span class="block-label">項目番号・支出項目名<span class="req">*</span></span>
-          <p class="hint">補正予算総会にて承認された補正予算から選んでください。款でまとめて申請する場合は、款の見出しのチェックボックスで款ごと選べます。</p>
+          <p class="hint">{{ budgetKind === "補正予算" ? "補正予算総会にて承認された補正予算" : budgetKind === "本予算" ? "総会にて承認された本予算" : "承認された予算" }}から選んでください。款でまとめて申請する場合は、款の見出しのチェックボックスで款ごと選べます。</p>
           <ExpenseItemsField
             v-model:keys="form.budgetLineKeys"
             v-model:amounts="form.itemAmounts"
@@ -177,7 +178,7 @@ async function onSubmit() {
 
         <RadioWithOther
           v-model="form.budgetChange"
-          label="補正予算からの変更"
+          :label="`${budgetKind}からの変更`"
           :options="BUDGET_CHANGES"
           required
           hint="増額の場合はフォームに回答したうえで、必ずZAIに相談してください。（入力した執行額と予算額の差から自動で選んでいます。違う場合は選び直してください）"
@@ -220,7 +221,7 @@ async function onSubmit() {
 
       <fieldset v-else-if="methodGroup === '発注'">
         <legend>発注</legend>
-        <p class="section-desc">ZAIが駒場祭委員会の各種アカウントで発注を行います。</p>
+        <p class="section-desc">ZAIが五月祭常任委員会の各種アカウントで発注を行います。</p>
         <RadioWithOther v-model="form.site" label="通販サイト" :options="ONLINE_SITES" other required />
         <label><span>商品ページのリンク<span class="req">*</span></span>
           <textarea v-model="form.url" rows="3" placeholder="複数ある場合は改行して入力してください" required />

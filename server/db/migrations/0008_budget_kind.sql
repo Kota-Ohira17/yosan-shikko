@@ -1,0 +1,1 @@
+ALTER TABLE `budget_lines` ADD `budget_kind` text DEFAULT '本予算' NOT NULL;

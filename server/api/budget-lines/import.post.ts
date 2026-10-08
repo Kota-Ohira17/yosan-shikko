@@ -1,5 +1,8 @@
+import type { BudgetKind } from '../../utils/budget'
+
 /**
- * 本予算「支出」シートの CSV を取り込み、予算明細を全件入れ替える（財務局長・管理者のみ）。
+ * 本予算または補正予算の「支出」シートの CSV を取り込み、予算明細を全件入れ替える（財務局長・管理者のみ）。
+ * どちらの予算かは kind（main: 本予算 / revised: 補正予算）で指定する。auto か未指定なら CSV から推測する。
  * 申請側は明細の内容をコピーして持っているので、入れ替えても過去の申請は変わらない。
  */
 export default defineEventHandler(async (event) => {
@@ -8,7 +11,11 @@ export default defineEventHandler(async (event) => {
   const file = parts.find(p => p.name === 'file' && p.data.length > 0)
   if (!file) throw createError({ statusCode: 400, message: 'CSV ファイルを選んでください' })
 
-  const lines = parseBudgetCsv(decodeCsv(file.data))
+  const text = decodeCsv(file.data)
+  const lines = parseBudgetCsv(text)
+  const kindPart = parts.find(p => p.name === 'kind')?.data.toString()
+  // 値は ASCII（main / revised / auto）で受け取る（送信元の文字コードに左右されないように）
+  const budgetKind: BudgetKind = kindPart === 'main' ? '本予算' : kindPart === 'revised' ? '補正予算' : detectBudgetKind(text)
   if (!lines.length) {
     throw createError({ statusCode: 400, message: '金額の入った明細が見つかりませんでした。「支出」シートの CSV か確認してください' })
   }
@@ -19,7 +26,7 @@ export default defineEventHandler(async (event) => {
   await db.batch([
     db.delete(schema.budgetLines),
     ...Array.from({ length: Math.ceil(lines.length / CHUNK) }, (_, i) =>
-      db.insert(schema.budgetLines).values(lines.slice(i * CHUNK, (i + 1) * CHUNK).map(l => ({ ...l, importedAt }))),
+      db.insert(schema.budgetLines).values(lines.slice(i * CHUNK, (i + 1) * CHUNK).map(l => ({ ...l, importedAt, budgetKind }))),
     ),
   ] as const)
 
@@ -27,5 +34,6 @@ export default defineEventHandler(async (event) => {
     count: lines.length,
     total: lines.reduce((s, l) => s + l.budgetAmount, 0),
     importedAt,
+    budgetKind,
   }
 })

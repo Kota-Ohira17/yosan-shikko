@@ -56,7 +56,7 @@ export const counters = sqliteTable('counters', {
 export type Entry = typeof entries.$inferSelect
 
 /**
- * 本予算「支出」シートの明細（金額のある行）。財務局長・管理者が CSV を取り込むたびに全件入れ替える。
+ * 本予算または補正予算の「支出」シートの明細（金額のある行）。財務局長・管理者が CSV を取り込むたびに全件入れ替える。
  * key は「項目番号|名前|数量」で、取り込み直しても同じ明細なら同じ key になる。
  */
 export const budgetLines = sqliteTable('budget_lines', {
@@ -83,6 +83,8 @@ export const budgetLines = sqliteTable('budget_lines', {
   plannedTiming: text('planned_timing').notNull().default(''),
   remark: text('remark').notNull().default(''),
   importedAt: integer('imported_at', { mode: 'timestamp_ms' }).notNull(),
+  /** 取り込んだのが本予算か補正予算か（取り込みごとに全明細で同じ値） */
+  budgetKind: text('budget_kind', { enum: ['本予算', '補正予算'] }).notNull().default('本予算'),
 })
 
 /**

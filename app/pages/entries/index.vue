@@ -58,7 +58,7 @@ const shownEntries = computed(() => (entries.value ?? []).filter(r =>
   view.value !== '発注' || !siteFilter.value || (siteOf(r) || '（未記入）') === siteFilter.value))
 
 const DETAIL_LABELS: Record<string, string> = {
-  budgetChange: '補正予算からの変更',
+  budgetChange: '予算からの変更',
   site: '通販サイト',
   url: '商品ページのリンク',
   deliveryPlace: '配達場所',

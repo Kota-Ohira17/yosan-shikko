@@ -1,5 +1,5 @@
 /**
- * 本予算スプレッドシート「支出」シートの CSV を明細の配列にする。
+ * 本予算・補正予算スプレッドシートの「支出」シートの CSV を明細の配列にする（どちらの形でも読める）。
  *
  * シートは 局 → 担当 → 款(out-03-02) → 項(out-03-02-06) → 目 → 節 の階層を行で表していて、
  * 「希望予算額」が入っている行が執行対象の明細。上の行の 款・項・目・節 を引き継いで名前を作る。
@@ -79,6 +79,27 @@ function parseMoney(value: string) {
   return Number.isFinite(n) ? n : null
 }
 
+export type BudgetKind = '本予算' | '補正予算'
+
+/**
+ * 本予算か補正予算かを CSV から推測する。
+ * 見出しより上（シート名の行など）に「補正」とあれば補正予算。なければ列で見分ける
+ * （本予算は「希望予算額」、補正予算は「予算額」と「単価」）。
+ */
+export function detectBudgetKind(text: string): BudgetKind {
+  const rows = parseCsv(text)
+  const headerIndex = rows.findIndex((r) => {
+    const c = columnIndexes(r)
+    return c.number >= 0 && c.amount >= 0
+  })
+  const above = rows.slice(0, Math.max(headerIndex, 0)).flat().join(' ')
+  if (above.includes('補正')) return '補正予算'
+  const header = (rows[headerIndex] ?? []).map(normalizeHeader)
+  if (header.includes('希望予算額')) return '本予算'
+  if (header.includes('単価')) return '補正予算'
+  return '本予算'
+}
+
 export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
   const rows = parseCsv(text)
   const headerIndex = rows.findIndex((r) => {
@@ -133,7 +154,8 @@ export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
     const amount = parseMoney(get(row, 'amount'))
     if (amount === null) continue
 
-    const itemNumber = ctx.kouNo || ctx.kanNo
+    // 補正予算は明細の行ごとに番号がある（out01-01-02）。本予算の目・節の行は番号がないので上の項・款の番号を使う
+    const itemNumber = number || ctx.kouNo || ctx.kanNo
     if (!itemNumber) continue
     const quantity = get(row, 'quantity')
     const label = [ctx.kou || ctx.kan, ctx.moku, ctx.setsu].filter(Boolean).join(' / ')

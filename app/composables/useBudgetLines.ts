@@ -5,7 +5,13 @@ export function useBudgetLines() {
   return useFetch('/api/budget-lines', { key: 'budget-lines', default: () => [] })
 }
 
-export type BudgetLineView = NonNullable<ReturnType<typeof useBudgetLines>['data']['value']>[number]
+/** 取り込んである予算が本予算か補正予算か（まだ取り込んでいなければ「予算」）。フォームの文言に使う */
+export function useBudgetKind() {
+  const { data } = useBudgetLines()
+  return computed(() => data.value[0]?.budgetKind ?? '予算')
+}
+
+export type BudgetLineView =NonNullable<ReturnType<typeof useBudgetLines>['data']['value']>[number]
 
 export const formatYen = (n: number | null | undefined) =>
   n == null ? '' : `${n < 0 ? '-' : ''}¥${Math.abs(n).toLocaleString('ja-JP')}`
@@ -95,7 +101,7 @@ export function siteOfVendor(vendor: string) {
 }
 
 /**
- * 「補正予算からの変更」を、執行額の合計と予算額の合計から自動で選ぶ。手で選び直したら以降は上書きしない。
+ * 「予算からの変更」を、執行額の合計と予算額の合計から自動で選ぶ。手で選び直したら以降は上書きしない。
  * 戻り値は選択欄の変更時に呼ぶ関数。
  */
 export function useBudgetChangeFromItems(

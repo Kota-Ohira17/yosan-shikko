@@ -46,7 +46,7 @@ export const OTHER_METHODS = [
 export const BUDGET_CHANGES = ['大幅な増額（1万円以上）', '増額（1万円未満）', '減額', '変動なし'] as const
 export type BudgetChange = (typeof BUDGET_CHANGES)[number]
 
-/** 執行額と予算額の差から「補正予算からの変更」を決める（フォームの基準: 1万円以上の増額は「大幅な増額」） */
+/** 執行額と予算額の差から「予算からの変更」を決める（フォームの基準: 1万円以上の増額は「大幅な増額」） */
 export function budgetChangeOf(actual: number, budget: number): BudgetChange {
   const d = actual - budget
   if (d >= 10000) return '大幅な増額（1万円以上）'
