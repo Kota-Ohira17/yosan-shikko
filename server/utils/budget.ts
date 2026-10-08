@@ -3,24 +3,44 @@
  *
  * シートは 局 → 担当 → 款(out-03-02) → 項(out-03-02-06) → 目 → 節 の階層を行で表していて、
  * 「希望予算額」が入っている行が執行対象の明細。上の行の 款・項・目・節 を引き継いで名前を作る。
- * 列は見出し名で探すので、列の並びが変わっても動く。
+ * 列は見出し名で探すので、列の並びが変わっても動く。見出しは空白・改行・全角半角の違いを無視し、
+ * 書き方の違う別名（例: 「希望予算額」がなければ「予算額」）も受け付ける。
  */
 
+/** 列ごとの見出し名。前にあるものほど優先する */
 const COLUMNS = {
-  number: '項目番号',
-  bureau: '局',
-  team: '担当',
-  kan: '款',
-  kou: '項',
-  moku: '目',
-  setsu: '節',
-  quantity: '数量',
-  vendor: '取引先',
-  amount: '希望予算額',
-  link: 'リンク',
-  plannedTiming: '執行予定時期',
-  remark: '備考',
-} as const
+  number: ['項目番号', '番号'],
+  bureau: ['局'],
+  team: ['担当', '担当名'],
+  kan: ['款'],
+  kou: ['項'],
+  moku: ['目'],
+  setsu: ['節'],
+  quantity: ['数量'],
+  vendor: ['取引先'],
+  amount: ['希望予算額', '予算額', '金額'],
+  link: ['リンク'],
+  plannedTiming: ['執行予定時期'],
+  remark: ['備考'],
+} as const satisfies Record<string, readonly string[]>
+type ColumnKey = keyof typeof COLUMNS
+
+/** 見出しの比較用（空白・改行を消し、全角英数を半角に） */
+const normalizeHeader = (s: string) => s.normalize('NFKC').replace(/\s+/g, '')
+
+/** 見出し行での各列の位置（見つからなければ -1） */
+function columnIndexes(header: string[]) {
+  const cells = header.map(normalizeHeader)
+  return Object.fromEntries(
+    (Object.keys(COLUMNS) as ColumnKey[]).map((k) => {
+      for (const name of COLUMNS[k]) {
+        const i = cells.indexOf(name)
+        if (i >= 0) return [k, i]
+      }
+      return [k, -1]
+    }),
+  ) as Record<ColumnKey, number>
+}
 
 /** 金額が入っていた行が、どの階層の名前を持つ行だったか（none は数量だけの行） */
 export type BudgetLevel = 'kan' | 'kou' | 'moku' | 'setsu' | 'none'
@@ -49,26 +69,32 @@ export interface ParsedBudgetLine {
   remark: string
 }
 
-const MONEY = /^-?[¥￥]?-?[\d,]+$/
+/** 金額。Shift_JIS の CSV では ¥ が \ になるので、それも円記号として扱う */
+const MONEY = /^-?[¥￥\\]?-?[\d,]+$/
 
 function parseMoney(value: string) {
   const v = value.replace(/\s/g, '')
   if (!v || !MONEY.test(v) || !/\d/.test(v)) return null
-  const n = Number(v.replace(/[¥￥,]/g, ''))
+  const n = Number(v.replace(/[¥￥\\,]/g, ''))
   return Number.isFinite(n) ? n : null
 }
 
 export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
   const rows = parseCsv(text)
-  const headerIndex = rows.findIndex(r => r.includes(COLUMNS.number) && r.includes(COLUMNS.amount))
+  const headerIndex = rows.findIndex((r) => {
+    const c = columnIndexes(r)
+    return c.number >= 0 && c.amount >= 0
+  })
   if (headerIndex < 0) {
-    throw createError({ statusCode: 400, message: '「項目番号」「希望予算額」の見出し行が見つかりません。「支出」シートの CSV を選んでください' })
+    // 何が読めたかを見せて、原因（違うシート・文字化けなど）が分かるようにする
+    const preview = rows.slice(0, 3).map(r => r.filter(Boolean).slice(0, 8).join(' / ')).filter(Boolean).join(' ｜ ').slice(0, 200)
+    throw createError({
+      statusCode: 400,
+      message: `「項目番号」と「希望予算額」（または「予算額」）の見出しの行が見つかりません。「支出」シートの CSV か確認してください。読み取れた先頭の内容: ${preview || '（空）'}`,
+    })
   }
-  const header = rows[headerIndex]!
-  const col = Object.fromEntries(
-    Object.entries(COLUMNS).map(([k, name]) => [k, header.indexOf(name)]),
-  ) as Record<keyof typeof COLUMNS, number>
-  const get = (row: string[], k: keyof typeof COLUMNS) => (col[k] >= 0 ? (row[col[k]] ?? '').trim() : '')
+  const col = columnIndexes(rows[headerIndex]!)
+  const get = (row: string[], k: ColumnKey) => (col[k] >= 0 ? (row[col[k]] ?? '').trim() : '')
 
   const ctx = { bureauNo: '', bureau: '', team: '', kanNo: '', kan: '', kouNo: '', kouRawNo: '', kou: '', moku: '', setsu: '' }
   /** 款・項・目・節の行に書かれた取引先（下の明細に引き継ぐ） */
@@ -160,6 +186,19 @@ export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
     }
   }
   return lines
+}
+
+/**
+ * CSV ファイルの中身を文字列にする。Google スプレッドシートの CSV は UTF-8 だが、
+ * Excel で開いて保存し直すと Shift_JIS になるので、UTF-8 として読めなければ Shift_JIS で読む。
+ */
+export function decodeCsv(data: Uint8Array) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(data)
+  }
+  catch {
+    return new TextDecoder('shift_jis').decode(data)
+  }
 }
 
 /** RFC 4180 の CSV（セル内の改行・"" エスケープ対応）。先頭の BOM は無視する */

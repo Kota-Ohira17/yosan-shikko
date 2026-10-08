@@ -58,6 +58,9 @@ const filtered = computed(() => {
         <li>「ファイル → ダウンロード → カンマ区切り形式（.csv）」で保存する</li>
         <li>下で選んで取り込む（今の明細はすべて入れ替わります。過去の申請には影響しません）</li>
       </ol>
+      <p class="hint">
+        「項目番号」と「希望予算額」（または「予算額」）の見出しがある行を探して読み込みます。Excel で保存し直した CSV（Shift_JIS）も読み込めます。
+      </p>
 
       <form @submit.prevent="onImport">
         <label>CSV ファイル<input type="file" accept=".csv,text/csv" required @change="file = ($event.target as HTMLInputElement).files?.[0] ?? null"></label>

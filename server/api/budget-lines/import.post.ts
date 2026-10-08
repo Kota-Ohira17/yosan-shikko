@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const file = parts.find(p => p.name === 'file' && p.data.length > 0)
   if (!file) throw createError({ statusCode: 400, message: 'CSV ファイルを選んでください' })
 
-  const lines = parseBudgetCsv(file.data.toString('utf8'))
+  const lines = parseBudgetCsv(decodeCsv(file.data))
   if (!lines.length) {
     throw createError({ statusCode: 400, message: '金額の入った明細が見つかりませんでした。「支出」シートの CSV か確認してください' })
   }
