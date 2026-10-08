@@ -50,7 +50,18 @@ const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 
 const onBudgetChangeInput = useBudgetChangeFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemAmounts'), toRef(form, 'budgetChange'))
 
 // 取引先が空欄の明細には、発注なら通販サイト、立替なら購入先を入れる
-useVendorDefault(toRef(form, 'itemVendors'), computed(() => (methodGroup.value === '発注' ? form.site : methodGroup.value === '立替' ? form.purchase : '')))
+const isAutoVendor = useVendorDefault(toRef(form, 'itemVendors'), computed(() => (methodGroup.value === '発注' ? form.site : methodGroup.value === '立替' ? form.purchase : '')))
+
+// 逆に、表から推測できる項目（担当名・購入先・通販サイト・数量）は、選んだ明細から初期値を入れておく
+useAutoFill(toRef(form, 'inCharge'), useTeamOfItems(toRef(form, 'budgetLineKeys')))
+/** 選んだ明細の取引先（上で自動で入れたものを除く。重複なし） */
+const itemVendors = computed(() => [...new Set(form.budgetLineKeys
+  .filter(k => !isAutoVendor(k))
+  .map(k => form.itemVendors[k] ?? '')
+  .filter(Boolean))])
+useAutoFill(toRef(form, 'purchase'), computed(() => itemVendors.value.join('、')))
+useAutoFill(toRef(form, 'site'), computed(() => (itemVendors.value.length === 1 ? siteOfVendor(itemVendors.value[0]!) : '')))
+useAutoFill(toRef(form, 'quantity'), useQuantityOfItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemQuantities')))
 
 /** 2段目の執行形態（現金執行 / カード決済 / その他） */
 const otherType = computed(() => OTHER_METHODS.find(m => m.label === form.otherChoice)?.type ?? (form.otherChoice ? 'その他' : ''))

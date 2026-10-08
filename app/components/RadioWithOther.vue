@@ -28,6 +28,18 @@ function pickOther() {
 watch(otherText, (t) => {
   if (otherOn.value) model.value = t
 })
+// 外から値が入ったとき（表から推測した初期値など）も、選択肢か「その他」かを合わせる
+watch(model, (v) => {
+  if (props.options.includes(v)) otherOn.value = false
+  else if (v === '' && otherText.value !== '') {
+    otherOn.value = false
+    otherText.value = ''
+  }
+  else if (v !== '' && props.other) {
+    otherOn.value = true
+    otherText.value = v
+  }
+})
 </script>
 
 <template>

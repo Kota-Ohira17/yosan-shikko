@@ -23,6 +23,9 @@ useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
 /** 予算の表で開く局。自分で局を選んだときだけ変える（明細から局が自動で入ったときは表を動かさない） */
 const tabBureau = ref('')
 const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 'amount'))
+// 表から推測できる担当名・数量は、選んだ明細から初期値を入れておく
+useAutoFill(toRef(form, 'inCharge'), useTeamOfItems(toRef(form, 'budgetLineKeys')))
+useAutoFill(toRef(form, 'quantity'), useQuantityOfItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemQuantities')))
 const done = ref<string>()
 
 async function onSubmit() {

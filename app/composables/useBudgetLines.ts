@@ -25,7 +25,7 @@ export function useBureauFromItems(keys: Ref<string[]>, department: Ref<string>)
  */
 export function useVendorDefault(vendors: Ref<Record<string, string>>, source: Ref<string>) {
   /** ここで自動で入れた明細と、そのときの値 */
-  const auto = new Map<string, string>()
+  const auto = reactive(new Map<string, string>())
   watch([vendors, source], ([v, s]) => {
     const next = { ...v }
     let changed = false
@@ -43,6 +43,55 @@ export function useVendorDefault(vendors: Ref<Record<string, string>>, source: R
     }
     if (changed) vendors.value = next
   }, { deep: true, immediate: true })
+  /** その明細の取引先が、ここで自動で入れたものか */
+  return (key: string) => auto.has(key) && auto.get(key) === vendors.value[key]
+}
+
+/**
+ * 入力欄に、表などから推測した値を入れておく。
+ * 空欄か、前に自動で入れた値のままのときだけ入れ替え、自分で書き換えた値は上書きしない。
+ */
+export function useAutoFill(target: Ref<string>, source: Ref<string>) {
+  let last = ''
+  watch(source, (s) => {
+    if (target.value !== '' && target.value !== last) return
+    target.value = s
+    last = s
+  }, { immediate: true })
+}
+
+/** 選んだ明細のうち最初のものの担当（表の「担当」列）。担当名の初期値にする */
+export function useTeamOfItems(keys: Ref<string[]>) {
+  const { data: lines } = useBudgetLines()
+  return computed(() => {
+    const byKey = new Map(lines.value.map(l => [l.key, l]))
+    return keys.value.map(k => byKey.get(k)?.team ?? '').find(Boolean) ?? ''
+  })
+}
+
+/** 明細ごとの数量を1つの文字列にまとめる（1件ならそのまま、複数なら「明細名 数量」を並べる） */
+export function useQuantityOfItems(keys: Ref<string[]>, quantities: Ref<Record<string, string>>) {
+  const { data: lines } = useBudgetLines()
+  return computed(() => {
+    const byKey = new Map(lines.value.map(l => [l.key, l]))
+    const filled = keys.value.filter(k => quantities.value[k])
+    if (filled.length === 1 && keys.value.length === 1) return quantities.value[filled[0]!]!
+    return filled.map(k => `${byKey.get(k)?.label ?? k} ${quantities.value[k]}`).join('、')
+  })
+}
+
+/** 取引先の書き方の揺れを、通販サイトの選択肢にそろえる */
+const SITE_ALIASES: Record<string, string[]> = {
+  ASKUL: ['askul', 'アスクル'],
+  モノタロウ: ['モノタロウ', 'monotaro', 'ものたろう'],
+  Amazon: ['amazon', 'アマゾン'],
+  楽天: ['楽天', 'rakuten'],
+  アースダンボール: ['アースダンボール'],
+}
+/** 取引先が通販サイトの選択肢のどれかならその名前、そうでなければ取引先をそのまま返す（「その他」に入る） */
+export function siteOfVendor(vendor: string) {
+  const v = vendor.toLowerCase()
+  return Object.entries(SITE_ALIASES).find(([, names]) => names.some(n => v.includes(n.toLowerCase())))?.[0] ?? vendor
 }
 
 /**
