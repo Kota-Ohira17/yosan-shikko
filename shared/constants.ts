@@ -16,9 +16,23 @@ export const BUREAUS = [
   { code: 'SYS', name: 'システム局' },
 ] as const
 
-/** 予算の局名 → 略称（見つからなければ空） */
+/**
+ * 予算の局名 → 申請に記録する局の値。略称が分かる局は略称（例: 財務局 → ZAI）、分からない局は局名のまま。
+ * 局の選択肢は取り込んだ予算の局から作る（BureauField）。予算が変わって局が増減しても選べるように。
+ */
 export function bureauCodeOf(name: string) {
-  return BUREAUS.find(b => b.name === name)?.code ?? ''
+  return BUREAUS.find(b => b.name === name)?.code ?? name
+}
+
+/** 申請に記録した局の値（略称または局名） → 予算の局名 */
+export function bureauNameOf(value: string) {
+  return BUREAUS.find(b => b.code === value)?.name ?? value
+}
+
+/** 選択肢の表示（例: 「ZAI（財務局）」、略称のない局は局名だけ） */
+export function bureauLabelOf(value: string) {
+  const known = BUREAUS.find(b => b.code === value)
+  return known ? `${known.code}（${known.name}）` : value
 }
 
 /** 執行形態の1段目（4つ目を選ぶと2段目で 現金執行 / カード決済 / その他 を選ぶ） */

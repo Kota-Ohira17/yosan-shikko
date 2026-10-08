@@ -10,7 +10,7 @@ export type BudgetLineView = NonNullable<ReturnType<typeof useBudgetLines>['data
 export const formatYen = (n: number | null | undefined) =>
   n == null ? '' : `${n < 0 ? '-' : ''}¥${Math.abs(n).toLocaleString('ja-JP')}`
 
-/** 執行項目を選んだとき、局が未入力なら最初の明細の局（略称）を入れる */
+/** 執行項目を選んだとき、局が未入力なら最初の明細の局（略称、なければ局名）を入れる */
 export function useBureauFromItems(keys: Ref<string[]>, department: Ref<string>) {
   const { data: lines } = useBudgetLines()
   watch(keys, (k) => {

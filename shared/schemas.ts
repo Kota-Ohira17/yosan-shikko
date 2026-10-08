@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { BUDGET_CHANGES, BUREAUS, PAPER_RECEIPT, TRANSFER_BANKS } from './constants'
+import { BUDGET_CHANGES, PAPER_RECEIPT, TRANSFER_BANKS } from './constants'
 
 const required = (label: string) => {
   const message = `${label}を入力してください`
@@ -8,7 +8,8 @@ const required = (label: string) => {
 const date = z.string({ error: '日付を入力してください' }).regex(/^\d{4}-\d{2}-\d{2}$/, '日付を入力してください')
 /** 日付、または日付＋時刻（執行希望日時） */
 const dateTime = z.string({ error: '日時を入力してください' }).regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/, '日時を入力してください')
-const bureau = z.enum(BUREAUS.map(b => b.code) as [string, ...string[]], { error: '局を選んでください' })
+/** 局（略称、または略称のない局は予算の局名）。選択肢は取り込んだ予算によって変わるので文字列で受ける */
+const bureau = z.string({ error: '局を選んでください' }).trim().min(1, '局を選んでください').max(30)
 const yen = z.coerce.number({ error: '金額を数字で入力してください' }).int('整数で入力してください').positive('金額を入力してください')
 
 export const ITEM_NUMBER_PATTERN = /^out-\d{2}(-\d{2}){1,2}$/

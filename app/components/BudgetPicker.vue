@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BUREAUS } from '#shared/constants'
+import { bureauNameOf } from '#shared/constants'
 
 /**
  * 予算明細をスプレッドシートと同じ形の表から複数選ぶ。v-model は明細の key の配列。
@@ -20,7 +20,7 @@ const bureaus = computed(() => [...new Set(lines.value.map(l => l.bureau).filter
 /** 表示中の局のタブ（'' はすべて）。最初は「すべて」 */
 const bureau = ref('')
 watch(() => props.preferredBureau, (code) => {
-  const name = BUREAUS.find(b => b.code === code)?.name
+  const name = code ? bureauNameOf(code) : ''
   if (name && bureaus.value.includes(name)) bureau.value = name
 })
 function openTab(name: string) {
