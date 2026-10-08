@@ -8,8 +8,8 @@ import { can } from '../../../shared/roles'
  */
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
-  const raw = String(getQuery(event).view ?? 'time')
-  const view: ViewKey = raw in VIEWS ? (raw as ViewKey) : 'time'
+  const raw = String(getQuery(event).view ?? 'deadline')
+  const view: ViewKey = raw in VIEWS ? (raw as ViewKey) : 'deadline'
   const e = schema.entries
 
   const conds: SQL[] = []
@@ -19,10 +19,10 @@ export default defineEventHandler(async (event) => {
   const byDeadline = [sql`${e.deadline} is null`, asc(e.deadline), asc(e.createdAt)]
   let orderBy: SQL[]
 
-  if (view === 'number' || view === 'time') {
+  if (view === 'number' || view === 'deadline') {
     // 立替の執行依頼は台帳に載せず、証憑提出の時点で載せる（旧GASと同じ）
     conds.push(not(and(eq(e.kind, 'execution'), eq(e.type, '立替'))!))
-    orderBy = view === 'number' ? [asc(e.itemNumber), asc(e.createdAt)] : [asc(e.createdAt)]
+    orderBy = view === 'number' ? [asc(e.itemNumber), asc(e.createdAt)] : byDeadline
   }
   else if (view === 'pending') {
     conds.push(eq(e.status, 'pending'))
