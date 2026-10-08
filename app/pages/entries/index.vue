@@ -73,17 +73,33 @@ function diff(budget: number, actual: number | null) {
   return `${d > 0 ? '+' : '-'}¥${Math.abs(d).toLocaleString('ja-JP')}`
 }
 
+/** 数字として読めない執行額の入力 */
+const invalidItem = (id: number) => parseYenInput(itemDrafts[id] ?? '') === null
+
+/** 明細ごとの執行額を保存する。読めない入力があれば保存せず false */
 async function saveItems(row: Row) {
-  const amounts = Object.fromEntries(row.items.map(i => [i.id, itemDrafts[i.id] === '' ? null : Math.trunc(Number(itemDrafts[i.id]))]))
+  if (row.items.some(i => invalidItem(i.id))) {
+    execErrors.value = ['執行額は数字で入力してください']
+    return false
+  }
+  const amounts = Object.fromEntries(row.items.map((i) => {
+    const n = parseYenInput(itemDrafts[i.id] ?? '')
+    return [i.id, n === '' ? null : n]
+  }))
   await $fetch(`/api/entries/${row.id}/items`, { method: 'PATCH', body: { amounts } })
+  return true
 }
 
 async function onSaveItems(row: Row) {
   execErrors.value = []
   itemsSaved.value = false
   try {
-    await saveItems(row)
+    if (!await saveItems(row)) return
     await refresh()
+    // 入力欄を保存された値（半角の数字）の表示にそろえる
+    for (const i of entries.value?.find(e => e.id === row.id)?.items ?? []) {
+      itemDrafts[i.id] = i.actualAmount == null ? '' : String(i.actualAmount)
+    }
     itemsSaved.value = true
   }
   catch (error) {
@@ -95,7 +111,7 @@ async function setDone(row: Row, done: boolean) {
   execErrors.value = []
   try {
     // 対応済みにするときは、直した執行額も一緒に保存する（申請の金額は明細の合計になる）
-    if (done && itemsChanged(row)) await saveItems(row)
+    if (done && itemsChanged(row) && !await saveItems(row)) return
     await $fetch(`/api/entries/${row.id}/execute`, {
       method: 'POST',
       body: {
@@ -174,9 +190,12 @@ async function setDone(row: Row, done: boolean) {
                           <input
                             v-if="can('executeEntries')"
                             v-model="itemDrafts[i.id]"
-                            type="number"
-                            step="1"
+                            type="text"
+                            inputmode="numeric"
+                            autocomplete="off"
                             placeholder="未入力"
+                            :class="{ invalid: invalidItem(i.id) }"
+                            :aria-invalid="invalidItem(i.id) || undefined"
                             :aria-label="`${i.label} の執行額`"
                           >
                           <template v-else>{{ i.actualAmount == null ? '未入力' : formatYen(i.actualAmount) }}</template>
@@ -245,7 +264,8 @@ async function setDone(row: Row, done: boolean) {
 .page-head h1 { margin: 0; }
 .items-table { width: auto; min-width: 32rem; margin: .4rem 0; background: var(--surface); }
 .items-table th, .items-table td { padding: .25rem .5rem; }
-.items-table input { width: 8rem; padding: .15rem .35rem; text-align: right; }
+.items-table input { width: 8rem; padding: .15rem .35rem; text-align: right; font-variant-numeric: tabular-nums; }
+.items-table input.invalid { border-color: var(--danger); }
 .items-table tfoot td { font-weight: 600; border-bottom: none; }
 .items-actions { display: flex; align-items: center; gap: .75rem; margin: 0 0 .75rem; }
 .ok { color: var(--done); font-size: .85rem; }

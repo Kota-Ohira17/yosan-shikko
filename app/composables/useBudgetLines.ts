@@ -40,6 +40,16 @@ export function useBudgetChangeFromItems(
   return () => { edited.value = true }
 }
 
+/**
+ * 金額の入力を数値にする。カンマ・全角数字・「¥」「円」・空白を許す（例: 「１２,０００円」→ 12000）。
+ * 空なら ''、数字として読めなければ null。
+ */
+export function parseYenInput(raw: string): number | '' | null {
+  const s = raw.normalize('NFKC').replace(/[,\s¥￥円]/g, '').replace(/[−‐－]/g, '-')
+  if (s === '') return ''
+  return /^-?\d+$/.test(s) ? Number(s) : null
+}
+
 /** 送信用に、未入力（''）の執行額を取り除く */
 export function filledAmounts(amounts: Record<string, number | ''>) {
   return Object.fromEntries(Object.entries(amounts).filter((e): e is [string, number] => e[1] !== ''))

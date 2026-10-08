@@ -48,9 +48,21 @@ const sumActual = (keys: string[]) => keys.reduce((s, k) => s + (actualOf(k) ?? 
 const actualTotal = computed(() => sumActual(current.value))
 const missingActual = computed(() => current.value.filter(k => actualOf(k) == null).length)
 
+/** 入力中の文字（「12,000」など）と、数字として読めない入力の印 */
+const rawAmounts = reactive<Record<string, string>>({})
+const invalidAmounts = reactive<Record<string, boolean>>({})
+const amountText = (key: string) => {
+  if (key in rawAmounts) return rawAmounts[key]
+  const v = currentAmounts.value[key]
+  return v === '' || v == null ? '' : String(v)
+}
+
 function setAmount(key: string, raw: string) {
-  const n = raw.trim() === '' ? '' : Math.trunc(Number(raw))
-  currentAmounts.value = { ...currentAmounts.value, [key]: Number.isNaN(n) ? '' : n }
+  rawAmounts[key] = raw
+  const n = parseYenInput(raw)
+  invalidAmounts[key] = n === null
+  if (n === null) return
+  currentAmounts.value = { ...currentAmounts.value, [key]: n }
   amounts.value = currentAmounts.value
 }
 
@@ -58,6 +70,12 @@ function setAmount(key: string, raw: string) {
 function syncAmounts() {
   const next: Record<string, number | ''> = {}
   for (const k of current.value) next[k] = k in currentAmounts.value ? currentAmounts.value[k]! : (byKey.value.get(k)?.budgetAmount ?? '')
+  for (const k of Object.keys(rawAmounts)) {
+    if (!(k in next)) {
+      delete rawAmounts[k]
+      delete invalidAmounts[k]
+    }
+  }
   currentAmounts.value = next
   amounts.value = next
 }
@@ -177,15 +195,18 @@ function toggleMany(keys: string[], on: boolean) {
             <span class="yen">{{ formatYen(i.line.budgetAmount) }}</span>
             <span class="amount">
               <input
-                type="number"
+                type="text"
                 inputmode="numeric"
-                step="1"
-                :value="currentAmounts[i.line.key]"
+                autocomplete="off"
+                :value="amountText(i.line.key)"
                 :aria-label="`${i.line.label} の執行額`"
+                :aria-invalid="invalidAmounts[i.line.key] || undefined"
+                :class="{ invalid: invalidAmounts[i.line.key] }"
                 placeholder="未入力"
                 @input="setAmount(i.line.key, ($event.target as HTMLInputElement).value)"
               >
-              <small v-if="diffLabel(i.line.key, i.line.budgetAmount)" class="diff">{{ diffLabel(i.line.key, i.line.budgetAmount) }}</small>
+              <small v-if="invalidAmounts[i.line.key]" class="error">数字で入力してください</small>
+              <small v-else-if="diffLabel(i.line.key, i.line.budgetAmount)" class="diff">{{ diffLabel(i.line.key, i.line.budgetAmount) }}</small>
             </span>
             <button type="button" class="link" :aria-label="`${i.line.label} を外す`" @click="toggle(i.line.key)">外す</button>
           </li>
@@ -252,6 +273,8 @@ function toggleMany(keys: string[], on: boolean) {
 .amount { display: grid; gap: .1rem; }
 .amount input { padding: .2rem .4rem; text-align: right; font-variant-numeric: tabular-nums; }
 .diff { font-size: .72rem; color: var(--muted); text-align: right; }
+.amount input.invalid { border-color: var(--danger); }
+.amount .error { font-size: .72rem; text-align: right; }
 .warn { color: var(--danger); }
 @media (max-width: 640px) {
   .cols { display: none; }
