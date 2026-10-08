@@ -134,9 +134,9 @@ function onRowEnter(row: Row) {
   --fill-kan: #c9daf8;
   --fill-kou: #fce5cd;
   --fill-head: #d9d9d9;
-  /* 選択した行・まとめて選ぶ対象の行（シートにない色にして見分けられるようにする） */
-  --row-picked: #e6dff5;
-  --row-preview: #f3f0fa;
+  /* 選択した行・まとめて選ぶ対象の行（ボタンと同じローズベージュ。シートの色とも見分けられる） */
+  --row-picked: var(--accent-bg);
+  --row-preview: var(--main);
 }
 /* 枠の高さを固定し、中で縦横にスクロールする（列の見出しは枠の上端に貼り付く） */
 .sheet-wrap.fixed-height { height: clamp(18rem, 60vh, 42rem); max-height: none; overscroll-behavior: contain; }
