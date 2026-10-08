@@ -18,28 +18,8 @@
   --preview-bg: #fbf5e1;
   --done: #2f7a3b;
   --danger: #c62828;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* 暗い画面では、メイン・サブカラーと同じ色合いの暗い色にする */
-    --main: #1f1916;
-    --sub: #2a2418;
-    --bg: var(--main);
-    --surface: #2a221e;
-    --text: #f2e9e4;
-    --muted: #b3a49b;
-    --border: #45392f;
-    --accent: #7d6255;
-    --accent-bg: #4a3b34;
-    --accent-bg-hover: #56453d;
-    --accent-text: var(--text);
-    --picked-bg: #4a4128;
-    --preview-bg: #363020;
-    --done: #3fb950;
-    --danger: #f85149;
-    color-scheme: dark;
-  }
+  /* スマホがダークモードでも PC と同じ配色で表示する（入力欄なども明るいまま） */
+  color-scheme: only light;
 }
 
 * { box-sizing: border-box; }
@@ -184,6 +164,3 @@ dd { margin: 0; word-break: break-all; }
 .muted { color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .env-banner { background: #fff4ce; color: #5c4400; border-bottom: 1px solid #e5c76b; padding: .4rem 1rem; font-size: .85rem; text-align: center; }
-@media (prefers-color-scheme: dark) {
-  .env-banner { background: #3d3100; color: #ffe08a; border-color: #6b5600; }
-}
