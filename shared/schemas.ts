@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { BUDGET_CHANGES, PAPER_RECEIPT, TRANSFER_BANKS } from './constants'
+import { PAPER_RECEIPT, TRANSFER_BANKS } from './constants'
 
 const required = (label: string) => {
   const message = `${label}を入力してください`
@@ -50,7 +50,8 @@ const base = z.object({
   inCharge: required('担当名'),
   ...items,
   itemName: required('支出項目名'),
-  budgetChange: z.enum(BUDGET_CHANGES, { error: '予算からの変更を選んでください' }),
+  /** 1万円以上の増額のとき、予算委員会の承認を得たか（予算からの変更そのものはサーバーで金額から決める） */
+  budgetCommitteeApproved: z.boolean().default(false),
   remark: z.string().trim().default(''),
 })
 

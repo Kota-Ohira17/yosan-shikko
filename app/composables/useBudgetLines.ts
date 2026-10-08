@@ -1,4 +1,4 @@
-import { budgetChangeOf, bureauCodeOf } from '#shared/constants'
+import { bureauCodeOf } from '#shared/constants'
 
 /** 予算明細（全件）。フォームと選択部品で同じデータを共有する */
 export function useBudgetLines() {
@@ -98,27 +98,6 @@ const SITE_ALIASES: Record<string, string[]> = {
 export function siteOfVendor(vendor: string) {
   const v = vendor.toLowerCase()
   return Object.entries(SITE_ALIASES).find(([, names]) => names.some(n => v.includes(n.toLowerCase())))?.[0] ?? vendor
-}
-
-/**
- * 「予算からの変更」を、執行額の合計と予算額の合計から自動で選ぶ。手で選び直したら以降は上書きしない。
- * 戻り値は選択欄の変更時に呼ぶ関数。
- */
-export function useBudgetChangeFromItems(
-  keys: Ref<string[]>,
-  amounts: Ref<Record<string, number | ''>>,
-  budgetChange: Ref<string>,
-) {
-  const { data: lines } = useBudgetLines()
-  const edited = ref(false)
-  watch([keys, amounts], ([k, a]) => {
-    if (edited.value || !k.length) return
-    const byKey = new Map(lines.value.map(l => [l.key, l]))
-    const budget = k.reduce((s, key) => s + (byKey.get(key)?.budgetAmount ?? 0), 0)
-    const actual = k.reduce((s, key) => s + (typeof a[key] === 'number' ? a[key] as number : byKey.get(key)?.budgetAmount ?? 0), 0)
-    budgetChange.value = budgetChangeOf(actual, budget)
-  }, { deep: true })
-  return () => { edited.value = true }
 }
 
 /**

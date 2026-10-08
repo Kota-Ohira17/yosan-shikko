@@ -55,6 +55,22 @@ export function budgetChangeOf(actual: number, budget: number): BudgetChange {
   return '変動なし'
 }
 
+/** 1万円以上の増額は予算委員会の承認が要る */
+export const LARGE_INCREASE: BudgetChange = '大幅な増額（1万円以上）'
+
+/**
+ * 選んだ予算明細の予算額の合計と、明細ごとの執行額（未入力なら予算額）の合計から「予算からの変更」を決める。
+ * 申請フォームの表示とサーバーでの保存の両方で使う。
+ */
+export function budgetChangeOfItems(
+  lines: { key: string, budgetAmount: number }[],
+  amounts: Record<string, number | '' | undefined>,
+) {
+  const budget = lines.reduce((s, l) => s + l.budgetAmount, 0)
+  const actual = lines.reduce((s, l) => s + (typeof amounts[l.key] === 'number' ? amounts[l.key] as number : l.budgetAmount), 0)
+  return { budget, actual, change: budgetChangeOf(actual, budget) }
+}
+
 export const ACCOUNT_TYPES = ['普通', '当座'] as const
 export const ONLINE_SITES = ['ASKUL', 'モノタロウ', 'Amazon', '楽天', 'アースダンボール'] as const
 export const DELIVERY_PLACES = ['駒場（キャンプラA103）'] as const

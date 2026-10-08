@@ -59,6 +59,7 @@ const shownEntries = computed(() => (entries.value ?? []).filter(r =>
 
 const DETAIL_LABELS: Record<string, string> = {
   budgetChange: '予算からの変更',
+  budgetCommitteeApproved: '予算委員会の承認',
   site: '通販サイト',
   url: '商品ページのリンク',
   deliveryPlace: '配達場所',
@@ -79,7 +80,7 @@ function detailRows(row: Row) {
   const { bank, ...rest } = row.details as Record<string, unknown>
   return Object.entries({ ...rest, ...(bank as object | undefined) })
     .filter(([, v]) => v !== '' && v != null)
-    .map(([k, v]) => ({ label: DETAIL_LABELS[k] ?? k, value: String(v), isUrl: k === 'url' }))
+    .map(([k, v]) => ({ label: DETAIL_LABELS[k] ?? k, value: v === true ? '承認済み' : String(v), isUrl: k === 'url' }))
 }
 
 /** 商品ページのリンク（改行・空白区切りで複数あり得る） */

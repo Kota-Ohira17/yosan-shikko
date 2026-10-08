@@ -1,4 +1,5 @@
 import { can } from '../../../shared/roles'
+import { budgetChangeOfItems, LARGE_INCREASE } from '../../../shared/constants'
 import { executionRequestSchema } from '../../../shared/schemas'
 
 /** 執行依頼（旧「執行依頼」フォーム） */
@@ -9,11 +10,17 @@ export default defineEventHandler(async (event) => {
 
   const {
     type, applicantName, department, inCharge, budgetLineKeys, itemNumber: manualItemNumber, itemName, remark, deadline,
-    itemAmounts: _itemAmounts, itemQuantities: _itemQuantities, itemVendors: _itemVendors,
+    itemAmounts, itemQuantities: _itemQuantities, itemVendors: _itemVendors, budgetCommitteeApproved,
     ...rest
   } = input
   const { amount, quantity, ...details } = rest as typeof rest & { amount?: number, quantity?: string }
   const { itemNumber, lines } = await resolveBudgetLines(budgetLineKeys, manualItemNumber)
+
+  // 予算からの変更は申請者に選ばせず、予算額と執行額から決める（予算にない項目なら決めない）
+  const budgetChange = lines.length ? budgetChangeOfItems(lines, itemAmounts).change : null
+  if (budgetChange === LARGE_INCREASE && !budgetCommitteeApproved) {
+    throw createError({ statusCode: 400, message: '1万円以上の増額は、予算委員会の承認を得てから申請してください（承認のチェックが必要です）' })
+  }
 
   const attachmentId = file
     ? await saveAttachment(file, `${inCharge}_${itemName}_請求書`)
@@ -34,7 +41,11 @@ export default defineEventHandler(async (event) => {
     quantity: quantity ?? null,
     deadline,
     remark,
-    details,
+    details: {
+      ...details,
+      ...(budgetChange ? { budgetChange } : {}),
+      ...(budgetChange === LARGE_INCREASE ? { budgetCommitteeApproved: true } : {}),
+    },
     attachmentId,
   }, lines, input)
 

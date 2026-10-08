@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** 執行依頼。Google フォーム「予算執行依頼フォーム」と同じ質問・選択肢・説明文にそろえている */
 import {
-  ACCOUNT_TYPES, BUDGET_CHANGES, DELIVERY_PLACES, METHOD_GROUPS, ONLINE_SITES, OTHER_METHODS, PAPER_RECEIPT,
+  ACCOUNT_TYPES, budgetChangeOfItems, LARGE_INCREASE, DELIVERY_PLACES, METHOD_GROUPS, ONLINE_SITES, OTHER_METHODS, PAPER_RECEIPT,
 } from '#shared/constants'
 const { user } = useUserSession()
 const { submit, errors, pending } = useSubmit<{ seq: string }>('/api/entries')
@@ -16,7 +16,7 @@ const form = reactive({
   itemVendors: {} as Record<string, string>,
   itemNumber: '',
   itemName: '',
-  budgetChange: '',
+  budgetCommitteeApproved: false,
   remark: '',
   amount: '',
   // 振込
@@ -46,7 +46,6 @@ useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
 /** 予算の表で開く局。自分で局を選んだときだけ変える（明細から局が自動で入ったときは表を動かさない） */
 const tabBureau = ref('')
 const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 'amount'))
-const onBudgetChangeInput = useBudgetChangeFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemAmounts'), toRef(form, 'budgetChange'))
 
 const { data: budgetLines } = useBudgetLines()
 const budgetKind = useBudgetKind()
@@ -90,6 +89,20 @@ const budgetVendors = computed(() => {
 useAutoFill(toRef(form, 'purchase'), computed(() => budgetVendors.value.join('、')))
 useAutoFill(toRef(form, 'site'), computed(() => (budgetVendors.value.length === 1 ? siteOfVendor(budgetVendors.value[0]!) : '')))
 
+/** 予算からの変更（選んだ明細の予算額と、明細ごとに入力した金額から決める。表示だけで申請者は選ばない） */
+const budgetSummary = computed(() => {
+  if (!hasItems.value) return null
+  const byKey = new Map(budgetLines.value.map(l => [l.key, l]))
+  const lines = form.budgetLineKeys.map(k => byKey.get(k)).filter(l => l != null)
+  return budgetChangeOfItems(lines, form.itemAmounts)
+})
+const diffYen = computed(() => {
+  const d = (budgetSummary.value?.actual ?? 0) - (budgetSummary.value?.budget ?? 0)
+  return `${d > 0 ? '+' : d < 0 ? '-' : '±'}¥${Math.abs(d).toLocaleString('ja-JP')}`
+})
+/** 1万円以上の増額なのに、予算委員会の承認にチェックがない */
+const needsApproval = computed(() => budgetSummary.value?.change === LARGE_INCREASE && !form.budgetCommitteeApproved)
+
 /** 2段目の執行形態（現金執行 / カード決済 / その他） */
 const otherType = computed(() => OTHER_METHODS.find(m => m.label === form.otherChoice)?.type ?? (form.otherChoice ? 'その他' : ''))
 const OTHER_LABELS = OTHER_METHODS.filter(m => m.type !== 'その他').map(m => m.label)
@@ -106,7 +119,7 @@ function buildPayload() {
     itemVendors: form.itemVendors,
     itemNumber: form.itemNumber,
     itemName: form.itemName,
-    budgetChange: form.budgetChange,
+    budgetCommitteeApproved: budgetSummary.value?.change === LARGE_INCREASE && form.budgetCommitteeApproved,
     remark: form.remark,
   }
   switch (methodGroup.value) {
@@ -175,15 +188,6 @@ async function onSubmit() {
           />
           <p class="hint">支出項目名は、どの項目に対応するかが分かれば正式名称でなくても大丈夫です。</p>
         </div>
-
-        <RadioWithOther
-          v-model="form.budgetChange"
-          :label="`${budgetKind}からの変更`"
-          :options="BUDGET_CHANGES"
-          required
-          hint="増額の場合はフォームに回答したうえで、必ずZAIに相談してください。（入力した執行額と予算額の差から自動で選んでいます。違う場合は選び直してください）"
-          @change="onBudgetChangeInput"
-        />
 
         <RadioWithOther v-model="methodGroup" label="執行形態" :options="METHOD_GROUPS" required />
       </fieldset>
@@ -302,13 +306,26 @@ async function onSubmit() {
       </fieldset>
 
       <template v-if="methodGroup">
+        <div v-if="budgetSummary" class="budget-change" :class="{ large: budgetSummary.change === LARGE_INCREASE }">
+          <span class="block-label">{{ budgetKind }}からの変更</span>
+          <p class="change">
+            <strong>{{ budgetSummary.change }}</strong>
+            <span class="muted">（予算額 {{ formatYen(budgetSummary.budget) }} → 執行額 {{ formatYen(budgetSummary.actual) }}、差額 {{ diffYen }}）</span>
+          </p>
+          <p class="hint">選んだ明細の予算額と、明細ごとに入力した金額から自動で決まります。増額の場合は、必ずZAIに相談してください。</p>
+          <label v-if="budgetSummary.change === LARGE_INCREASE" class="check approval">
+            <input v-model="form.budgetCommitteeApproved" type="checkbox" required>
+            予算委員会の承認を得ました<span class="req">*</span>
+          </label>
+          <p v-if="budgetSummary.change === LARGE_INCREASE" class="hint">1万円以上の増額は、予算委員会の承認を得てから申請してください。</p>
+        </div>
         <div class="confirm">
           <span class="block-label">以上の内容に誤りがないことを確認しましたか？<span class="req">*</span></span>
           <p class="hint">送信後の編集はできません。</p>
           <label class="check"><input v-model="confirmed" type="checkbox"> はい</label>
         </div>
         <ul v-if="errors.length" class="error"><li v-for="e in errors" :key="e">{{ e }}</li></ul>
-        <button type="submit" :disabled="!confirmed || pending">{{ pending ? '送信中…' : '送信' }}</button>
+        <button type="submit" :disabled="!confirmed || pending || needsApproval">{{ pending ? '送信中…' : '送信' }}</button>
       </template>
     </form>
   </section>
@@ -324,5 +341,9 @@ async function onSubmit() {
 .block { display: grid; gap: .4rem; }
 .block-label { font-size: .9rem; }
 .confirm { display: grid; gap: .25rem; }
+.budget-change { display: grid; gap: .3rem; padding: .7rem .9rem; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 6px; background: var(--surface); }
+.budget-change.large { border-left-color: var(--danger); }
+.budget-change .change { margin: 0; }
+.budget-change .approval { font-weight: 600; }
 label .hint { display: block; }
 </style>
