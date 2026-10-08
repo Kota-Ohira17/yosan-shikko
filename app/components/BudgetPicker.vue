@@ -317,10 +317,10 @@ function toggleMany(keys: string[], on: boolean) {
 <style scoped>
 .picker { display: grid; gap: .75rem; min-width: 0; }
 .picker {
-  --stripe-kan: var(--accent);
-  --stripe-kou: color-mix(in srgb, var(--accent) 60%, var(--surface));
-  --stripe-moku: color-mix(in srgb, var(--accent) 35%, var(--surface));
-  --stripe-setsu: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  --stripe-kan: #d2b4a6;
+  --stripe-kou: #e2cdc3;
+  --stripe-moku: #e6d9a8;
+  --stripe-setsu: #efe6c4;
 }
 .picked { border: 1px solid var(--accent); border-radius: 6px; padding: .5rem .75rem; display: grid; gap: .5rem; background: var(--sub); }
 .picked-head { display: flex; justify-content: space-between; gap: 1rem; font-size: .9rem; }
@@ -345,7 +345,7 @@ function toggleMany(keys: string[], on: boolean) {
   .picked li { padding-bottom: .4rem; border-bottom: 1px dashed var(--border); }
 }
 .scope { font-size: .75rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 .5em; }
-.scope.whole { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+.scope.whole { color: var(--text); background: var(--accent-bg); border-color: var(--accent); font-weight: 600; }
 .picked ul { list-style: none; margin: 0; padding: 0 0 0 .4rem; display: grid; gap: .15rem; border-left: 1px dashed var(--border); }
 .picked li { font-size: .85rem; padding-left: .5rem; }
 .trail { color: var(--muted); }
@@ -356,7 +356,7 @@ function toggleMany(keys: string[], on: boolean) {
 
 .lv-badge {
   display: inline-block; min-width: 1.4em; padding: 0 .3em; border-radius: 3px; text-align: center;
-  font-size: .72rem; font-weight: 700; line-height: 1.5; color: #fff; background: var(--stripe-kan);
+  font-size: .72rem; font-weight: 700; line-height: 1.5; color: var(--text); background: var(--stripe-kan);
 }
 .lv-badge.kou { background: var(--stripe-kou); color: var(--text); }
 .lv-badge.moku { background: var(--stripe-moku); color: var(--text); }
@@ -367,7 +367,7 @@ function toggleMany(keys: string[], on: boolean) {
   display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .7rem; font-size: .85rem;
   background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px 6px 0 0;
 }
-.bureau-tabs button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+.bureau-tabs button.active { background: var(--accent-bg); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
 .bureau-tabs button.empty:not(.active) { opacity: .5; }
 .tab-count { font-size: .72rem; opacity: .75; font-variant-numeric: tabular-nums; }
 .tab-picked { font-size: .72rem; font-weight: 700; padding: 0 .35em; border-radius: 999px; background: var(--done); color: #fff; }

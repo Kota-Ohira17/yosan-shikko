@@ -117,15 +117,16 @@ function onRowEnter(row: Row) {
 .sheet-wrap {
   max-height: 28rem; overflow: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
   /* 階層ごとの色。上の階層ほど濃い（BudgetPicker の凡例と同じ） */
-  --lv-bureau: color-mix(in srgb, var(--accent) 24%, var(--surface));
-  --lv-kan: color-mix(in srgb, var(--accent) 16%, var(--surface));
-  --lv-kou: color-mix(in srgb, var(--accent) 9%, var(--surface));
-  --lv-moku: color-mix(in srgb, var(--accent) 4%, var(--surface));
-  --lv-setsu: color-mix(in srgb, var(--accent) 2%, var(--surface));
-  --stripe-kan: var(--accent);
-  --stripe-kou: color-mix(in srgb, var(--accent) 60%, var(--surface));
-  --stripe-moku: color-mix(in srgb, var(--accent) 35%, var(--surface));
-  --stripe-setsu: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  /* 款・項はメインカラー、目・節はサブカラーの淡い色で塗り分ける */
+  --lv-bureau: #ecdfd8;
+  --lv-kan: #f1e5df;
+  --lv-kou: var(--main);
+  --lv-moku: var(--sub);
+  --lv-setsu: #fcf9ee;
+  --stripe-kan: #d2b4a6;
+  --stripe-kou: #e2cdc3;
+  --stripe-moku: #e6d9a8;
+  --stripe-setsu: #efe6c4;
 }
 /* 枠の高さを固定し、中で縦横にスクロールする（列の見出しは枠の上端に貼り付く） */
 .sheet-wrap.fixed-height { height: clamp(18rem, 60vh, 42rem); max-height: none; overscroll-behavior: contain; }
@@ -161,7 +162,7 @@ tr.group.lv-setsu > td:first-child { box-shadow: inset 5px 0 0 var(--stripe-sets
 .group-pick { display: inline-flex; align-items: center; gap: .25rem; cursor: pointer; padding-left: .3rem; }
 .lv-badge {
   display: inline-block; min-width: 1.4em; padding: 0 .3em; border-radius: 3px; text-align: center;
-  font-size: .72rem; font-weight: 700; line-height: 1.5; color: #fff; background: var(--stripe-kan);
+  font-size: .72rem; font-weight: 700; line-height: 1.5; color: var(--text); background: var(--stripe-kan);
 }
 tr.lv-kou .lv-badge { background: var(--stripe-kou); color: var(--text); }
 tr.lv-moku .lv-badge { background: var(--stripe-moku); color: var(--text); }
@@ -171,9 +172,9 @@ tr.line .check { padding-left: .7rem; }
 
 .selectable tr.pickable { cursor: pointer; }
 .selectable tr.group.pickable:hover td { filter: brightness(.97); }
-.selectable tr.line:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.selectable tr.line:hover td { background: var(--preview-bg); }
 /* 見出しにマウスを乗せたとき、まとめて選ばれる明細 */
-tr.line.preview td { background: color-mix(in srgb, var(--accent) 9%, transparent); }
-tr.line.preview > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
-tr.line.on td { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+tr.line.preview td { background: var(--preview-bg); }
+tr.line.preview > td:first-child { box-shadow: inset 3px 0 0 var(--stripe-moku); }
+tr.line.on td { background: var(--picked-bg); }
 </style>
