@@ -20,6 +20,8 @@ const form = reactive({
 })
 const file = ref<File | null>(null)
 useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
+/** 予算の表で開く局。自分で局を選んだときだけ変える（明細から局が自動で入ったときは表を動かさない） */
+const tabBureau = ref('')
 const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 'amount'))
 const done = ref<string>()
 
@@ -41,7 +43,7 @@ async function onSubmit() {
     <form v-else @submit.prevent="onSubmit">
       <label>提出者（立替者）氏名<input v-model="form.advancedName" required></label>
       <div class="row">
-        <BureauField v-model="form.department" />
+        <BureauField v-model="form.department" @update:model-value="tabBureau = $event" />
         <label>担当名<input v-model="form.inCharge" required></label>
       </div>
       <fieldset>
@@ -53,7 +55,7 @@ async function onSubmit() {
           v-model:vendors="form.itemVendors"
           v-model:item-number="form.itemNumber"
           v-model:item-name="form.itemName"
-          :preferred-bureau="form.department"
+          :preferred-bureau="tabBureau"
           item-name-label="支出項目名（内訳）"
         />
       </fieldset>

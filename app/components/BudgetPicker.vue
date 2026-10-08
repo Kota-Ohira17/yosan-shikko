@@ -10,24 +10,20 @@ const selected = defineModel<string[]>({ required: true })
 const amounts = defineModel<Record<string, number | ''>>('amounts', { default: () => ({}) })
 const quantities = defineModel<Record<string, string>>('quantities', { default: () => ({}) })
 const vendors = defineModel<Record<string, string>>('vendors', { default: () => ({}) })
-/** 最初に開く局（フォームで選んだ局の略称。例: ZAI） */
+/** 開く局（フォームで局を選んだときの略称。例: ZAI）。変わるたびにその局のタブへ移動する */
 const props = defineProps<{ preferredBureau?: string }>()
 const { data: lines } = await useBudgetLines()
 
 const query = ref('')
 const bureaus = computed(() => [...new Set(lines.value.map(l => l.bureau).filter(Boolean))])
 
-/** 表示中の局のタブ（'' はすべて）。フォームの局に合わせて開き、自分でタブを押したら以降は追わない */
+/** 表示中の局のタブ（'' はすべて）。最初は「すべて」 */
 const bureau = ref('')
-const tabTouched = ref(false)
 watch(() => props.preferredBureau, (code) => {
-  if (tabTouched.value) return
   const name = BUREAUS.find(b => b.code === code)?.name
   if (name && bureaus.value.includes(name)) bureau.value = name
-}, { immediate: true })
-if (!bureau.value && bureaus.value.length) bureau.value = bureaus.value[0]!
+})
 function openTab(name: string) {
-  tabTouched.value = true
   bureau.value = name
 }
 

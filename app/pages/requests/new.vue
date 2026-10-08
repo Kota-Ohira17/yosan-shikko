@@ -44,6 +44,8 @@ const confirmed = ref(false)
 const done = ref<string>()
 
 useBureauFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'department'))
+/** 予算の表で開く局。自分で局を選んだときだけ変える（明細から局が自動で入ったときは表を動かさない） */
+const tabBureau = ref('')
 const onAmountInput = useTotalFromItems(toRef(form, 'itemAmounts'), toRef(form, 'amount'))
 const onBudgetChangeInput = useBudgetChangeFromItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemAmounts'), toRef(form, 'budgetChange'))
 
@@ -116,7 +118,7 @@ async function onSubmit() {
         <legend>予算執行依頼フォーム</legend>
         <label><span>申請者氏名<span class="req">*</span></span><input v-model="form.applicantName" placeholder="例：こまばたろう" required></label>
         <div class="row">
-          <BureauField v-model="form.department" />
+          <BureauField v-model="form.department" @update:model-value="tabBureau = $event" />
           <label><span>担当名<span class="req">*</span></span><input v-model="form.inCharge" placeholder="例：zas" required></label>
         </div>
 
@@ -130,7 +132,7 @@ async function onSubmit() {
           v-model:vendors="form.itemVendors"
             v-model:item-number="form.itemNumber"
             v-model:item-name="form.itemName"
-          :preferred-bureau="form.department"
+          :preferred-bureau="tabBureau"
             item-name-label="支出項目名"
           />
           <p class="hint">支出項目名は、どの項目に対応するかが分かれば正式名称でなくても大丈夫です。</p>
