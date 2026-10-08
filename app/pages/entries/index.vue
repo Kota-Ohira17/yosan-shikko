@@ -34,6 +34,19 @@ const execErrors = ref<string[]>([])
 
 type Row = NonNullable<typeof entries.value>[number]
 
+/** 形態の列。発注は通販サイトも出して、詳細を開かなくても分かるようにする */
+function methodLabel(row: Row) {
+  if (row.type !== '発注' || !siteOf(row)) return row.paymentMethod ?? row.type
+  return `発注（${siteOf(row)}）${row.paymentMethod ? ` / ${row.paymentMethod}` : ''}`
+}
+
+/** 「発注」で見ているときの通販サイトの絞り込み（'' はすべて） */
+const siteFilter = ref('')
+watch(view, () => { siteFilter.value = '' })
+const orderSites = computed(() => [...new Set((entries.value ?? []).filter(r => r.type === '発注').map(r => siteOf(r) || '（未記入）'))])
+const shownEntries = computed(() => (entries.value ?? []).filter(r =>
+  view.value !== '発注' || !siteFilter.value || (siteOf(r) || '（未記入）') === siteFilter.value))
+
 const DETAIL_LABELS: Record<string, string> = {
   budgetChange: '補正予算からの変更',
   site: '通販サイト',
@@ -182,6 +195,15 @@ async function setDone(row: Row, done: boolean) {
       </button>
     </nav>
 
+    <nav v-if="view === '発注' && orderSites.length" class="tabs site-tabs" aria-label="通販サイトで絞り込む">
+      <span class="site-tabs-label">通販サイト：</span>
+      <button :class="{ active: siteFilter === '' }" @click="siteFilter = ''">すべて</button>
+      <button v-for="s in orderSites" :key="s" :class="{ active: siteFilter === s }" @click="siteFilter = s">
+        {{ s }}
+        <small>{{ (entries ?? []).filter(r => r.type === '発注' && (siteOf(r) || '（未記入）') === s).length }}</small>
+      </button>
+    </nav>
+
     <section v-if="orderSummary.length" class="order-summary" aria-label="未対応の発注（サイト別）">
       <strong>未対応の発注（サイト別）</strong>
       <ul>
@@ -194,7 +216,7 @@ async function setDone(row: Row, done: boolean) {
       </ul>
     </section>
 
-    <p v-if="!entries?.length" class="empty">該当する申請はありません。</p>
+    <p v-if="!shownEntries.length" class="empty">該当する申請はありません。</p>
 
     <div v-else class="table-wrap ledger-wrap">
       <table class="ledger">
@@ -205,7 +227,7 @@ async function setDone(row: Row, done: boolean) {
           </tr>
         </thead>
         <tbody>
-          <template v-for="row in entries" :key="row.id">
+          <template v-for="row in shownEntries" :key="row.id">
             <tr class="clickable" :class="{ done: row.status === 'done' }" @click="toggle(row)">
               <td class="c-seq">{{ row.seq }}</td>
               <td class="c-date">{{ dateTime(row.createdAt) }}</td>
@@ -213,7 +235,7 @@ async function setDone(row: Row, done: boolean) {
               <td class="c-name">{{ row.itemName }}</td>
               <td data-label="数量">{{ row.quantity }}</td>
               <td class="num c-amount">{{ yen(row.amount) }}</td>
-              <td data-label="形態">{{ row.paymentMethod ?? row.type }}</td>
+              <td data-label="形態">{{ methodLabel(row) }}</td>
               <td data-label="期限・予定日">{{ row.deadline }}</td>
               <td data-label="申請者">{{ row.applicantName }}<small>（{{ row.department }}/{{ row.inCharge }}）</small></td>
               <td class="c-status">
@@ -339,6 +361,10 @@ async function setDone(row: Row, done: boolean) {
 .ok { color: var(--done); font-size: .85rem; }
 .bank-pick { display: flex; align-items: end; gap: .6rem; }
 .bank-link { white-space: nowrap; padding-bottom: .5rem; }
+.site-tabs { align-items: center; margin-top: -.4rem; }
+.site-tabs-label { font-size: .85rem; color: var(--muted); }
+.site-tabs button { font-size: .85rem; padding: .2rem .7rem; }
+.site-tabs small { color: var(--muted); margin-left: .2rem; }
 .order-summary { margin: 0 0 1rem; padding: .6rem .9rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: .88rem; }
 .order-summary ul { margin: .25rem 0 0; padding-left: 1.2rem; }
 .order-summary .short { color: #9a6b00; font-weight: 600; }
