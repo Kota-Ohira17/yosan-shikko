@@ -9,6 +9,8 @@ export default defineNuxtConfig({
     // ローカルは http なので、Secure 属性付きの Cookie を捨てるブラウザ（Safari など）でもログインできるようにする
     // @ts-expect-error password は環境変数 NUXT_SESSION_PASSWORD から入るので、ここでは cookie だけ上書きする
     runtimeConfig: { session: { cookie: { secure: false } } },
+    // スマホ確認用の一時URL（Cloudflare のクイックトンネル）からのアクセスを通す
+    vite: { server: { allowedHosts: ['.trycloudflare.com'] } },
   },
   runtimeConfig: {
     // 環境変数 NUXT_DATABASE_URL などで上書きする（.env.example 参照）
