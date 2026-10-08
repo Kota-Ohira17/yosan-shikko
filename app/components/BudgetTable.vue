@@ -12,6 +12,8 @@ import {
 const props = defineProps<{
   lines: BudgetLineView[]
   selected?: string[]
+  /** 枠の中でスクロールさせず、全行をページに出す（列の見出しは画面上部に残す） */
+  fullHeight?: boolean
 }>()
 const emit = defineEmits<{
   toggle: [key: string]
@@ -53,7 +55,7 @@ function onRowEnter(row: Row) {
 </script>
 
 <template>
-  <div class="sheet-wrap" @mouseleave="preview = new Set()">
+  <div class="sheet-wrap" :class="{ 'full-height': fullHeight }" @mouseleave="preview = new Set()">
     <table class="sheet" :class="{ selectable }">
       <thead>
         <tr>
@@ -120,6 +122,12 @@ function onRowEnter(row: Row) {
   --stripe-kou: color-mix(in srgb, var(--accent) 60%, var(--surface));
   --stripe-moku: color-mix(in srgb, var(--accent) 35%, var(--surface));
   --stripe-setsu: color-mix(in srgb, var(--accent) 18%, var(--surface));
+}
+/* ページのスクロールで見る。枠をスクロール領域にしないことで、列の見出しが画面上部に貼り付く */
+.sheet-wrap.full-height { max-height: none; overflow: visible; }
+@media (max-width: 900px) {
+  /* 狭い画面では表が入りきらないので横スクロールにする（このときは見出しの貼り付きはなし） */
+  .sheet-wrap.full-height { overflow-x: auto; }
 }
 .sheet { border-collapse: collapse; font-size: .8rem; width: 100%; min-width: 58rem; }
 .sheet th, .sheet td { border: 1px solid var(--border); padding: .2rem .4rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }

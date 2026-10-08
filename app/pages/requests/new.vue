@@ -121,6 +121,7 @@ async function onSubmit() {
             v-model:amounts="form.itemAmounts"
             v-model:item-number="form.itemNumber"
             v-model:item-name="form.itemName"
+          :preferred-bureau="form.department"
             item-name-label="支出項目名"
           />
           <p class="hint">支出項目名は、どの項目に対応するかが分かれば正式名称でなくても大丈夫です。</p>

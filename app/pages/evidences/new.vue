@@ -49,6 +49,7 @@ async function onSubmit() {
           v-model:amounts="form.itemAmounts"
           v-model:item-number="form.itemNumber"
           v-model:item-name="form.itemName"
+          :preferred-bureau="form.department"
           item-name-label="支出項目名（内訳）"
         />
       </fieldset>

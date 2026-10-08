@@ -1,15 +1,32 @@
 <script setup lang="ts">
+import { BUREAUS } from '#shared/constants'
+
 /**
  * 予算明細をスプレッドシートと同じ形の表から複数選ぶ。v-model は明細の key の配列。
  * v-model:amounts は明細ごとの実際の執行額（選んだときは予算額が入り、違うところだけ直す）。
  */
 const selected = defineModel<string[]>({ required: true })
 const amounts = defineModel<Record<string, number | ''>>('amounts', { default: () => ({}) })
+/** 最初に開く局（フォームで選んだ局の略称。例: ZAI） */
+const props = defineProps<{ preferredBureau?: string }>()
 const { data: lines } = await useBudgetLines()
 
 const query = ref('')
-const bureau = ref('')
 const bureaus = computed(() => [...new Set(lines.value.map(l => l.bureau).filter(Boolean))])
+
+/** 表示中の局のタブ（'' はすべて）。フォームの局に合わせて開き、自分でタブを押したら以降は追わない */
+const bureau = ref('')
+const tabTouched = ref(false)
+watch(() => props.preferredBureau, (code) => {
+  if (tabTouched.value) return
+  const name = BUREAUS.find(b => b.code === code)?.name
+  if (name && bureaus.value.includes(name)) bureau.value = name
+}, { immediate: true })
+if (!bureau.value && bureaus.value.length) bureau.value = bureaus.value[0]!
+function openTab(name: string) {
+  tabTouched.value = true
+  bureau.value = name
+}
 
 // 親への反映（v-model）は次の描画まで遅れるので、素早く続けて押しても取りこぼさないよう手元にも持つ
 const current = ref<string[]>([...selected.value])
@@ -82,13 +99,27 @@ const selectedByKan = computed(() => {
   })
 })
 
-const filtered = computed(() => {
+/** 絞り込み語に合う明細（局のタブに関係なく） */
+const matched = computed(() => {
   const words = query.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return lines.value
   return lines.value.filter((l) => {
-    if (bureau.value && l.bureau !== bureau.value) return false
     const text = `${l.itemNumber} ${l.label} ${l.kan} ${l.team} ${l.vendor} ${l.quantity}`.toLowerCase()
     return words.every(w => text.includes(w))
   })
+})
+const filtered = computed(() => matched.value.filter(l => !bureau.value || l.bureau === bureau.value))
+
+/** タブに出す件数（絞り込み中は該当件数）と、その局で選んでいる件数 */
+const tabs = computed(() => {
+  const picked = new Set(current.value)
+  const all = [{ name: '', label: 'すべて', count: matched.value.length, picked: current.value.length }]
+  return all.concat(bureaus.value.map(name => ({
+    name,
+    label: name,
+    count: matched.value.filter(l => l.bureau === name).length,
+    picked: lines.value.filter(l => l.bureau === name && picked.has(l.key)).length,
+  })))
 })
 
 function toggle(key: string) {
@@ -162,14 +193,22 @@ function toggleMany(keys: string[], on: boolean) {
       </section>
     </div>
 
-    <div class="row">
-      <label>絞り込み<input v-model="query" type="search" placeholder="例: インク / out-03-02 / ASKUL"></label>
-      <label>局
-        <select v-model="bureau">
-          <option value="">すべて</option>
-          <option v-for="b in bureaus" :key="b">{{ b }}</option>
-        </select>
-      </label>
+    <label class="search">絞り込み<input v-model="query" type="search" placeholder="例: インク / out-03-02 / ASKUL"></label>
+
+    <div class="bureau-tabs" role="tablist" aria-label="局">
+      <button
+        v-for="t in tabs"
+        :key="t.name"
+        type="button"
+        role="tab"
+        :aria-selected="bureau === t.name"
+        :class="{ active: bureau === t.name, empty: !t.count }"
+        @click="openTab(t.name)"
+      >
+        {{ t.label }}
+        <span class="tab-count">{{ t.count }}</span>
+        <span v-if="t.picked" class="tab-picked" :title="`この局で選択中 ${t.picked}件`">✓{{ t.picked }}</span>
+      </button>
     </div>
 
     <div class="legend" aria-label="階層の見方">
@@ -185,8 +224,8 @@ function toggleMany(keys: string[], on: boolean) {
       <span class="legend-item"><span class="leaf-swatch" />明細（金額のある行）</span>
     </div>
 
-    <BudgetTable v-if="filtered.length" :lines="filtered" :selected="current" @toggle="toggle" @toggle-many="toggleMany" />
-    <p v-else class="hint">該当する明細がありません。</p>
+    <BudgetTable v-if="filtered.length" :lines="filtered" :selected="current" full-height @toggle="toggle" @toggle-many="toggleMany" />
+    <p v-else class="hint">{{ query ? 'この局には該当する明細がありません。ほかの局のタブ（件数つき）を見てください。' : '該当する明細がありません。' }}</p>
     <p class="hint">
       明細の行をクリックすると1件ずつ選べます。款・項・目・節の見出しのチェックボックスは、その下の明細をすべてまとめて選択・解除します
       （横の数字が対象の件数。マウスを乗せると対象の明細が色付きで表示されます）。
@@ -236,6 +275,16 @@ function toggleMany(keys: string[], on: boolean) {
 .lv-badge.kou { background: var(--stripe-kou); color: var(--text); }
 .lv-badge.moku { background: var(--stripe-moku); color: var(--text); }
 .lv-badge.setsu { background: var(--stripe-setsu); color: var(--text); }
+.search { max-width: 28rem; }
+.bureau-tabs { display: flex; flex-wrap: wrap; gap: .3rem; border-bottom: 2px solid var(--accent); padding-bottom: .4rem; }
+.bureau-tabs button {
+  display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .7rem; font-size: .85rem;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px 6px 0 0;
+}
+.bureau-tabs button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+.bureau-tabs button.empty:not(.active) { opacity: .5; }
+.tab-count { font-size: .72rem; opacity: .75; font-variant-numeric: tabular-nums; }
+.tab-picked { font-size: .72rem; font-weight: 700; padding: 0 .35em; border-radius: 999px; background: var(--done); color: #fff; }
 .legend { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; font-size: .78rem; color: var(--muted); }
 .legend-item { display: inline-flex; align-items: center; gap: .3rem; }
 .sep { color: var(--border); }

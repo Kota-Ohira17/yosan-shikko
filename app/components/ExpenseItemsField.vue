@@ -9,7 +9,11 @@ const keys = defineModel<string[]>('keys', { required: true })
 const amounts = defineModel<Record<string, number | ''>>('amounts', { required: true })
 const itemNumber = defineModel<string>('itemNumber', { required: true })
 const itemName = defineModel<string>('itemName', { required: true })
-defineProps<{ itemNameLabel: string }>()
+defineProps<{
+  itemNameLabel: string
+  /** 予算表で最初に開く局（フォームで選んだ局の略称） */
+  preferredBureau?: string
+}>()
 
 const { data: lines } = await useBudgetLines()
 const manual = ref(false)
@@ -43,7 +47,7 @@ watch(useManual, (m) => {
         <input v-model="itemNumber" placeholder="out-03-02-06" required>
       </label>
     </template>
-    <BudgetPicker v-else v-model="keys" v-model:amounts="amounts" />
+    <BudgetPicker v-else v-model="keys" v-model:amounts="amounts" :preferred-bureau="preferredBureau" />
 
     <button v-if="hasBudget" type="button" class="link" @click="manual = !manual">
       {{ manual ? '予算から選ぶ' : '予算にない項目を手入力する' }}
