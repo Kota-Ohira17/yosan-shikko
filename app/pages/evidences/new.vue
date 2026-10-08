@@ -52,7 +52,7 @@ async function onSubmit() {
     </div>
 
     <form v-else @submit.prevent="onSubmit">
-      <label>提出者（立替者）氏名<input v-model="form.advancedName" required></label>
+      <label>提出者（立替者）氏名<input v-model="form.advancedName" class="w-m" required></label>
       <div class="row">
         <BureauField v-model="form.department" @update:model-value="tabBureau = $event" />
         <label>担当名<input v-model="form.inCharge" required></label>
@@ -81,7 +81,7 @@ async function onSubmit() {
           amount-label="立替金額"
         />
       </fieldset>
-      <label v-else>数量<input v-model="form.quantity" required></label>
+      <label v-else>数量<input v-model="form.quantity" class="w-m" required></label>
       <div class="row">
         <label>証憑の種類
           <select v-model="form.kindOfEvidence">

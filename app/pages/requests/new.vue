@@ -167,7 +167,7 @@ async function onSubmit() {
 
       <fieldset>
         <legend>予算執行依頼フォーム</legend>
-        <label><span>申請者氏名<span class="req">*</span></span><input v-model="form.applicantName" placeholder="例：こまばたろう" required></label>
+        <label><span>申請者氏名<span class="req">*</span></span><input v-model="form.applicantName" class="w-m" placeholder="例：こまばたろう" required></label>
         <div class="row">
           <BureauField v-model="form.department" @update:model-value="tabBureau = $event" />
           <label><span>担当名<span class="req">*</span></span><input v-model="form.inCharge" placeholder="例：zas" required></label>
@@ -239,7 +239,7 @@ async function onSubmit() {
           :fields="itemFields"
           amount-label="金額"
         />
-        <label v-else><span>数量<span class="req">*</span></span><input v-model="form.quantity" required></label>
+        <label v-else><span>数量<span class="req">*</span></span><input v-model="form.quantity" class="w-m" required></label>
         <label><span>いつまでに必要ですか？<span class="req">*</span></span><input v-model="form.neededBy" type="date" required></label>
         <RadioWithOther v-model="form.deliveryPlace" label="配達場所" :options="DELIVERY_PLACES" other required />
         <label>備考<input v-model="form.remark"></label>
