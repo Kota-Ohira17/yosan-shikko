@@ -78,6 +78,7 @@ async function onSubmit() {
           v-model:vendors="form.itemVendors"
           :keys="form.budgetLineKeys"
           :fields="['quantity', 'vendor', 'amount']"
+          require-quantity
           amount-label="立替金額"
         />
       </fieldset>

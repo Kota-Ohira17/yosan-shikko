@@ -16,6 +16,14 @@ export async function resolveBudgetLines(keys: string[], manualItemNumber: strin
   return { itemNumber: [...new Set(lines.map(l => l.itemNumber))].join(', '), lines }
 }
 
+/** 予算の表に数量がある明細は、申請でも数量が必要（数量のない明細は空でよい） */
+export function requireItemQuantities(lines: BudgetLine[], itemQuantities: Record<string, string> = {}) {
+  const missing = lines.filter(l => l.quantity && !itemQuantities[l.key]?.trim())
+  if (missing.length) {
+    throw createError({ statusCode: 400, message: `数量を入力してください（${missing.map(l => l.label.split(' / ').at(-1)).join('、')}）` })
+  }
+}
+
 /** 申請時に入力された、明細ごとの実際の値（明細の key → 値） */
 export interface ItemInputs {
   itemAmounts?: Record<string, number>

@@ -38,8 +38,10 @@ export const itemsUpdateSchema = z.object({
   vendors: z.record(z.string(), z.string().trim().max(100).nullable()).default({}),
 })
 
-function checkItems(v: { budgetLineKeys: string[], itemNumber: string }, ctx: z.RefinementCtx) {
+function checkItems(v: { budgetLineKeys: string[], itemNumber: string, quantity?: string }, ctx: z.RefinementCtx) {
+  // 予算から選んだときの数量は明細ごとに入力する（予算の表に数量がある明細だけ必須。サーバーで確認する）
   if (v.budgetLineKeys.length) return
+  if (v.quantity === '') ctx.addIssue({ code: 'custom', message: '数量を入力してください', path: ['quantity'] })
   if (!v.itemNumber) ctx.addIssue({ code: 'custom', message: '執行項目を予算から選んでください', path: ['budgetLineKeys'] })
   else if (!ITEM_NUMBER_PATTERN.test(v.itemNumber)) ctx.addIssue({ code: 'custom', message: '項目番号は out-03-02-06 の形式で入力してください', path: ['itemNumber'] })
 }
@@ -74,7 +76,7 @@ export const executionRequestSchema = z.discriminatedUnion('type', [
     type: z.literal('発注'),
     site: required('通販サイト'),
     url: required('商品ページのリンク'), // 複数のリンクを改行で書いてよい
-    quantity: required('数量'),
+    quantity: z.string().trim().default(''), // 予算にない項目のときは必須（checkItems）
     deadline: date,
     deliveryPlace: required('配達場所'),
   }),
@@ -107,7 +109,7 @@ export const evidenceSchema = z.object({
   inCharge: required('担当名'),
   ...items,
   itemName: required('支出項目名（内訳）'),
-  quantity: required('数量'),
+  quantity: z.string().trim().default(''), // 予算にない項目のときは必須（checkItems）
   kindOfEvidence: z.enum(['領収書', 'レシート', '見積書', 'その他']),
   payDate: date,
   amount: yen,

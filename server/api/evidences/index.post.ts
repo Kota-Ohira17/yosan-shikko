@@ -10,6 +10,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: '証憑ファイルを添付してください' })
   }
   const { itemNumber, lines } = await resolveBudgetLines(input.budgetLineKeys, input.itemNumber)
+  // 予算の表に数量がある明細だけ数量が必須
+  requireItemQuantities(lines, input.itemQuantities)
 
   const attachmentId = await saveAttachment(file, `${input.inCharge}_${input.itemName}_${input.kindOfEvidence}`)
 
@@ -25,7 +27,7 @@ export default defineEventHandler(async (event) => {
     itemNumber,
     itemName: input.itemName,
     amount: input.amount,
-    quantity: input.quantity,
+    quantity: input.quantity || null,
     deadline: input.payDate,
     details: { kindOfEvidence: input.kindOfEvidence, refundTiming: input.refundTiming },
     attachmentId,

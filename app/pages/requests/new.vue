@@ -204,6 +204,7 @@ async function onSubmit() {
           v-model:vendors="form.itemVendors"
           :keys="form.budgetLineKeys"
           :fields="itemFields"
+          :require-quantity="methodGroup === '発注'"
           amount-label="振込金額"
         />
         <label v-else><span>振込金額<span class="req">*</span></span>
@@ -237,6 +238,7 @@ async function onSubmit() {
           v-model:vendors="form.itemVendors"
           :keys="form.budgetLineKeys"
           :fields="itemFields"
+          :require-quantity="methodGroup === '発注'"
           amount-label="金額"
         />
         <label v-else><span>数量<span class="req">*</span></span><input v-model="form.quantity" class="w-m" required></label>
@@ -260,6 +262,7 @@ async function onSubmit() {
           v-model:vendors="form.itemVendors"
           :keys="form.budgetLineKeys"
           :fields="itemFields"
+          :require-quantity="methodGroup === '発注'"
           amount-label="金額"
         />
         <label v-else><span>立替合計金額<span class="req">*</span></span>
@@ -288,6 +291,7 @@ async function onSubmit() {
           v-model:vendors="form.itemVendors"
           :keys="form.budgetLineKeys"
           :fields="itemFields"
+          :require-quantity="methodGroup === '発注'"
           amount-label="金額"
         />
         <label v-else><span>金額<span class="req">*</span></span>

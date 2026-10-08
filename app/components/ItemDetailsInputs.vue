@@ -10,6 +10,8 @@ const props = defineProps<{
   fields: ('quantity' | 'vendor' | 'amount')[]
   /** 金額の列の名前（例: 振込金額） */
   amountLabel?: string
+  /** 数量を必須にするか（必須でも、予算の表に数量がない明細は空でよい） */
+  requireQuantity?: boolean
 }>()
 const amounts = defineModel<Record<string, number | ''>>('amounts', { required: true })
 const quantities = defineModel<Record<string, string>>('quantities', { required: true })
@@ -73,7 +75,8 @@ function budgetDiff(key: string, budget: number) {
             <td v-if="show('quantity')">
               <input
                 type="text" autocomplete="off" :value="quantities[l.key] ?? ''" :aria-label="`${l.label} の数量`"
-                :placeholder="l.quantity ? '' : '数量'"
+                :required="requireQuantity && !!l.quantity"
+                :placeholder="l.quantity ? '' : '（任意）'"
                 @input="setQuantity(l.key, ($event.target as HTMLInputElement).value)"
               >
             </td>

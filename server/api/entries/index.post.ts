@@ -10,11 +10,14 @@ export default defineEventHandler(async (event) => {
 
   const {
     type, applicantName, department, inCharge, budgetLineKeys, itemNumber: manualItemNumber, itemName, remark, deadline,
-    itemAmounts, itemQuantities: _itemQuantities, itemVendors: _itemVendors, budgetCommitteeApproved,
+    itemAmounts, itemQuantities, itemVendors: _itemVendors, budgetCommitteeApproved,
     ...rest
   } = input
   const { amount, quantity, ...details } = rest as typeof rest & { amount?: number, quantity?: string }
   const { itemNumber, lines } = await resolveBudgetLines(budgetLineKeys, manualItemNumber)
+
+  // 発注の数量: 予算の表に数量がある明細だけ必須
+  if (type === '発注') requireItemQuantities(lines, itemQuantities)
 
   // 予算からの変更は申請者に選ばせず、予算額と執行額から決める（予算にない項目なら決めない）
   const budgetChange = lines.length ? budgetChangeOfItems(lines, itemAmounts).change : null
@@ -38,7 +41,7 @@ export default defineEventHandler(async (event) => {
     itemNumber,
     itemName,
     amount: amount ?? null,
-    quantity: quantity ?? null,
+    quantity: quantity || null,
     deadline,
     remark,
     details: {
