@@ -70,7 +70,7 @@ const filtered = computed(() => {
     <template v-if="lines.length">
       <h2>明細一覧</h2>
       <input v-model="query" type="search" class="search" placeholder="絞り込み（項目番号・局・担当・名前・取引先）">
-      <BudgetTable :lines="filtered" class="full" />
+      <BudgetTable :lines="filtered" fixed-height />
     </template>
   </section>
 </template>
@@ -80,5 +80,4 @@ const filtered = computed(() => {
 .steps { padding-left: 1.25rem; color: var(--muted); }
 h2 { font-size: 1.1rem; }
 .search { max-width: 420px; margin-bottom: .75rem; }
-.full :deep(.sheet-wrap), .full { max-height: 70vh; }
 </style>

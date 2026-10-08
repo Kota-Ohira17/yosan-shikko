@@ -12,8 +12,8 @@ import {
 const props = defineProps<{
   lines: BudgetLineView[]
   selected?: string[]
-  /** 枠の中でスクロールさせず、全行をページに出す（列の見出しは画面上部に残す） */
-  fullHeight?: boolean
+  /** 枠の高さを固定する（タブを切り替えても大きさが変わらない）。中身は枠の中でスクロールする */
+  fixedHeight?: boolean
 }>()
 const emit = defineEmits<{
   toggle: [key: string]
@@ -46,6 +46,10 @@ const COLUMNS = SHEET_COLUMNS.map(key => ({ key, label: SHEET_COLUMN_LABELS[key]
 const selectable = computed(() => props.selected !== undefined)
 const isOn = (row: Row) => row.line != null && (props.selected?.includes(row.line.key) ?? false)
 
+/** 表示する明細が変わったら（局のタブ・絞り込み）、枠の中のスクロールを先頭に戻す */
+const wrap = useTemplateRef<HTMLDivElement>('wrap')
+watch(() => props.lines, () => wrap.value?.scrollTo({ top: 0 }))
+
 /** 見出しにマウスを乗せている間、押したら選ばれる明細を光らせる */
 const preview = ref<Set<string>>(new Set())
 function onRowEnter(row: Row) {
@@ -55,7 +59,7 @@ function onRowEnter(row: Row) {
 </script>
 
 <template>
-  <div class="sheet-wrap" :class="{ 'full-height': fullHeight }" @mouseleave="preview = new Set()">
+  <div ref="wrap" class="sheet-wrap" :class="{ 'fixed-height': fixedHeight }" @mouseleave="preview = new Set()">
     <table class="sheet" :class="{ selectable }">
       <thead>
         <tr>
@@ -123,12 +127,8 @@ function onRowEnter(row: Row) {
   --stripe-moku: color-mix(in srgb, var(--accent) 35%, var(--surface));
   --stripe-setsu: color-mix(in srgb, var(--accent) 18%, var(--surface));
 }
-/* ページのスクロールで見る。枠をスクロール領域にしないことで、列の見出しが画面上部に貼り付く */
-.sheet-wrap.full-height { max-height: none; overflow: visible; }
-@media (max-width: 900px) {
-  /* 狭い画面では表が入りきらないので横スクロールにする（このときは見出しの貼り付きはなし） */
-  .sheet-wrap.full-height { overflow-x: auto; }
-}
+/* 枠の高さを固定し、中で縦横にスクロールする（列の見出しは枠の上端に貼り付く） */
+.sheet-wrap.fixed-height { height: clamp(18rem, 60vh, 42rem); max-height: none; overscroll-behavior: contain; }
 .sheet { border-collapse: collapse; font-size: .8rem; width: 100%; min-width: 58rem; }
 .sheet th, .sheet td { border: 1px solid var(--border); padding: .2rem .4rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .sheet th { position: sticky; top: 0; z-index: 1; background: var(--bg); color: var(--muted); font-weight: 600; white-space: nowrap; }

@@ -224,7 +224,7 @@ function toggleMany(keys: string[], on: boolean) {
       <span class="legend-item"><span class="leaf-swatch" />明細（金額のある行）</span>
     </div>
 
-    <BudgetTable v-if="filtered.length" :lines="filtered" :selected="current" full-height @toggle="toggle" @toggle-many="toggleMany" />
+    <BudgetTable v-if="filtered.length" :lines="filtered" :selected="current" fixed-height @toggle="toggle" @toggle-many="toggleMany" />
     <p v-else class="hint">{{ query ? 'この局には該当する明細がありません。ほかの局のタブ（件数つき）を見てください。' : '該当する明細がありません。' }}</p>
     <p class="hint">
       明細の行をクリックすると1件ずつ選べます。款・項・目・節の見出しのチェックボックスは、その下の明細をすべてまとめて選択・解除します
