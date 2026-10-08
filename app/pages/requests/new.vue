@@ -239,7 +239,7 @@ async function onSubmit() {
 </template>
 
 <style scoped>
-.intro { border-left: 4px solid var(--accent); padding: .25rem .9rem; font-size: .9rem; }
+.intro { border-left: 4px solid var(--accent); padding: .5rem .9rem; font-size: .9rem; background: var(--sub); border-radius: 0 6px 6px 0; }
 .intro p { margin: .3rem 0; }
 .intro ul { margin: .2rem 0; padding-left: 1.4rem; }
 .warn { color: var(--danger); font-weight: 600; }

@@ -322,7 +322,7 @@ function toggleMany(keys: string[], on: boolean) {
   --stripe-moku: color-mix(in srgb, var(--accent) 35%, var(--surface));
   --stripe-setsu: color-mix(in srgb, var(--accent) 18%, var(--surface));
 }
-.picked { border: 1px solid var(--accent); border-radius: 6px; padding: .5rem .75rem; display: grid; gap: .5rem; }
+.picked { border: 1px solid var(--accent); border-radius: 6px; padding: .5rem .75rem; display: grid; gap: .5rem; background: var(--sub); }
 .picked-head { display: flex; justify-content: space-between; gap: 1rem; font-size: .9rem; }
 /* 名前 | 予算額 | 数量 | 取引先 | 執行額 | 操作 の6列をそろえる */
 .cols, .kan-head, .picked li { display: grid; grid-template-columns: minmax(12rem, 1fr) 6rem 6.5rem 8.5rem 8.5rem 5rem; gap: .5rem; align-items: baseline; }

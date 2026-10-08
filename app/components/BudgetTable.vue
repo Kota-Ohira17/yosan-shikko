@@ -131,7 +131,7 @@ function onRowEnter(row: Row) {
 .sheet-wrap.fixed-height { height: clamp(18rem, 60vh, 42rem); max-height: none; overscroll-behavior: contain; }
 .sheet { border-collapse: collapse; font-size: .8rem; width: 100%; min-width: 58rem; }
 .sheet th, .sheet td { border: 1px solid var(--border); padding: .2rem .4rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-.sheet th { position: sticky; top: 0; z-index: 1; background: var(--bg); color: var(--muted); font-weight: 600; white-space: nowrap; }
+.sheet th { position: sticky; top: 0; z-index: 1; background: var(--sub); color: var(--muted); font-weight: 600; white-space: nowrap; }
 /* 局・担当・款は見出しの行にしか出ないので狭く、明細の名前が出る項・目・節を広くする */
 .sheet .c-number { width: 6rem; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); }
 .sheet .c-bureau { width: 4.2rem; }
