@@ -44,6 +44,9 @@ function methodLabel(row: Row) {
 const siteFilter = ref('')
 watch(view, () => { siteFilter.value = '' })
 const orderSites = computed(() => [...new Set((entries.value ?? []).filter(r => r.type === '発注').map(r => siteOf(r) || '（未記入）'))])
+/** そのサイトの未対応の発注の件数（絞り込みボタンの横に出す） */
+const pendingCount = (site: string) => (entries.value ?? [])
+  .filter(r => r.type === '発注' && r.status === 'pending' && (siteOf(r) || '（未記入）') === site).length
 const shownEntries = computed(() => (entries.value ?? []).filter(r =>
   view.value !== '発注' || !siteFilter.value || (siteOf(r) || '（未記入）') === siteFilter.value))
 
@@ -200,7 +203,7 @@ async function setDone(row: Row, done: boolean) {
       <button :class="{ active: siteFilter === '' }" @click="siteFilter = ''">すべて</button>
       <button v-for="s in orderSites" :key="s" :class="{ active: siteFilter === s }" @click="siteFilter = s">
         {{ s }}
-        <small>{{ (entries ?? []).filter(r => r.type === '発注' && (siteOf(r) || '（未記入）') === s).length }}</small>
+        <small v-if="pendingCount(s)" :title="`未対応 ${pendingCount(s)}件`">{{ pendingCount(s) }}</small>
       </button>
     </nav>
 
