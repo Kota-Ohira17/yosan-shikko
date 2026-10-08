@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useMenu } from '~/composables/useMenu'
+
 const { loggedIn, clear, fetch: refreshSession } = useUserSession()
 const { user, can, roleLabel, entriesTitle } = usePermissions()
 const { public: { envLabel } } = useRuntimeConfig()
@@ -9,6 +11,9 @@ router.afterEach(() => {
   if (loggedIn.value) refreshSession().catch(() => {})
 })
 
+/** 左のメニュー（権限に応じて出し分ける）。ホームのカードも同じ一覧を使う */
+const menu = useMenu()
+
 async function logout() {
   await clear()
   await navigateTo('/login')
@@ -16,25 +21,41 @@ async function logout() {
 </script>
 
 <template>
-  <div>
+  <div class="app">
     <div v-if="envLabel" class="env-banner" role="note">
       {{ envLabel }}：本物の口座情報や個人情報は入力しないでください
     </div>
-    <header class="header">
+
+    <header class="topbar">
       <NuxtLink to="/" class="brand">予算執行</NuxtLink>
-      <nav v-if="loggedIn" class="nav">
-        <NuxtLink to="/requests/new">執行依頼</NuxtLink>
-        <NuxtLink to="/evidences/new">証憑提出</NuxtLink>
-        <NuxtLink to="/entries">{{ entriesTitle }}</NuxtLink>
-        <NuxtLink v-if="can('importBudget')" to="/budget">予算</NuxtLink>
-        <NuxtLink v-if="can('manageUsers')" to="/users">ユーザー</NuxtLink>
-      </nav>
+      <span v-if="loggedIn" class="role-badge">{{ roleLabel }}</span>
       <div v-if="loggedIn" class="me">
-        <span>{{ user?.name }}<small>（{{ roleLabel }}）</small></span>
-        <button class="link" @click="logout">ログアウト</button>
+        <span class="me-name">{{ user?.name }}</span>
+        <span class="avatar" aria-hidden="true">{{ user?.name?.slice(0, 1) }}</span>
+        <button type="button" class="icon-button" title="ログアウト" aria-label="ログアウト" @click="logout">
+          <AppIcon name="logout" />
+        </button>
       </div>
     </header>
-    <main class="main">
+
+    <div v-if="loggedIn" class="layout">
+      <nav class="sidebar" aria-label="メニュー">
+        <NuxtLink
+          v-for="m in menu"
+          :key="m.to"
+          :to="m.to"
+          class="side-link"
+          :class="{ active: m.to === '/' ? $route.path === '/' : $route.path.startsWith(m.to) }"
+        >
+          <AppIcon :name="m.icon" />
+          <span>{{ m.to === '/entries' ? entriesTitle : m.label }}</span>
+        </NuxtLink>
+      </nav>
+      <main class="content">
+        <NuxtPage />
+      </main>
+    </div>
+    <main v-else class="content solo">
       <NuxtPage />
     </main>
   </div>

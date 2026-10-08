@@ -93,7 +93,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <section class="card">
+  <section class="page">
     <h1>予算執行依頼フォーム</h1>
 
     <div v-if="done" class="success">

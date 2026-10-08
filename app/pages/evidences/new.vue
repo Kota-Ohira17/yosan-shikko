@@ -32,7 +32,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <section class="card">
+  <section class="page">
     <h1>証憑提出</h1>
 
     <div v-if="done" class="success">
