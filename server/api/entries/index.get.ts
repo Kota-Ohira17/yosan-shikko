@@ -4,7 +4,7 @@ import { can } from '../../../shared/roles'
 
 /**
  * 一覧。旧スプレッドシートの各シートを view で切り替える。
- * 財務局長・管理者は全件、一般は自分の申請だけ。
+ * 全員がすべての申請を見られる（口座情報は財務局長・管理者のみ。roles.ts の viewAllEntries / viewBankAccount）。
  */
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)

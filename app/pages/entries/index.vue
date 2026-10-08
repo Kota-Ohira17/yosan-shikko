@@ -2,6 +2,9 @@
 import { TRANSFER_BANKS, VIEWS, type ViewKey } from '#shared/constants'
 
 const { can, entriesTitle } = usePermissions()
+const { public: { bankLinkSmbc, bankLinkYucho } } = useRuntimeConfig()
+/** 振込で使う口座 → その銀行のサイト（NUXT_PUBLIC_BANK_LINK_SMBC / _YUCHO で変えられる） */
+const bankLinks: Record<(typeof TRANSFER_BANKS)[number], string> = { SMBC: bankLinkSmbc, ゆうちょ: bankLinkYucho }
 const route = useRoute()
 const router = useRouter()
 
@@ -151,7 +154,7 @@ async function setDone(row: Row, done: boolean) {
   <section>
     <div class="page-head">
       <h1>{{ entriesTitle }}</h1>
-      <a v-if="can('viewAllEntries')" class="button" href="/api/settlement.xlsx" download>決算シートを出力（Excel）</a>
+      <SettlementExport v-if="can('exportSettlement')" />
     </div>
 
     <nav class="tabs">
@@ -266,9 +269,12 @@ async function setDone(row: Row, done: boolean) {
 
                 <div v-if="can('executeEntries')" class="exec">
                   <template v-if="row.status === 'pending'">
-                    <label v-if="row.kind === 'execution' && row.type === '振込'">使用口座
-                      <select v-model="exec.bank"><option v-for="b in TRANSFER_BANKS" :key="b">{{ b }}</option></select>
-                    </label>
+                    <div v-if="row.kind === 'execution' && row.type === '振込'" class="bank-pick">
+                      <label>使用口座
+                        <select v-model="exec.bank"><option v-for="b in TRANSFER_BANKS" :key="b">{{ b }}</option></select>
+                      </label>
+                      <a :href="bankLinks[exec.bank]" target="_blank" rel="noopener" class="bank-link">{{ exec.bank }}のサイトを開く ↗</a>
+                    </div>
                     <template v-if="row.type === '発注' && !row.items.length">
                       <label>確定金額（円）<YenInput v-model="exec.amount" /></label>
                       <label>数量<input v-model="exec.quantity"></label>
@@ -288,7 +294,7 @@ async function setDone(row: Row, done: boolean) {
 </template>
 
 <style scoped>
-.page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
 .page-head h1 { margin: 0; }
 .items-table { width: auto; min-width: 32rem; margin: .4rem 0; background: var(--surface); }
 .items-table th, .items-table td { padding: .25rem .5rem; }
@@ -299,4 +305,6 @@ async function setDone(row: Row, done: boolean) {
 .items-table tfoot td { font-weight: 600; border-bottom: none; }
 .items-actions { display: flex; align-items: center; gap: .75rem; margin: 0 0 .75rem; }
 .ok { color: var(--done); font-size: .85rem; }
+.bank-pick { display: flex; align-items: end; gap: .6rem; }
+.bank-link { white-space: nowrap; padding-bottom: .5rem; }
 </style>

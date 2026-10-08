@@ -18,6 +18,9 @@ export default defineNuxtConfig({
     allowedEmailDomain: 'g.ecc.u-tokyo.ac.jp',
     n8nWebhookUrl: '',
     n8nWebhookSecret: '',
+    // 決算シートを Google スプレッドシートに書き出すサービスアカウント
+    googleServiceAccountEmail: '',
+    googleServiceAccountPrivateKey: '',
     // テスト用ログインの合言葉（テスター用と、NUXT_ADMIN_EMAILS の管理者用）
     testLoginCode: '',
     testAdminCode: '',
@@ -33,6 +36,9 @@ export default defineNuxtConfig({
       googleLogin: false,
       /** 画面上部に出す環境名（例: テスト環境）。空なら出さない */
       envLabel: '',
+      /** 振込を対応済みにするとき、選んだ口座の横に出す銀行サイトへのリンク */
+      bankLinkSmbc: 'https://www.smbc.co.jp/',
+      bankLinkYucho: 'https://www.jp-bank.japanpost.jp/',
     },
   },
 })

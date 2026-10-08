@@ -1,6 +1,6 @@
 /**
  * 権限（役割）と、それぞれができること。サーバー・画面の両方でこの表だけを見て判定する。
- * 財務局長と管理者はできることが同じで、名前（肩書き）だけが違う。それ以外は一般。
+ * 全員がすべての申請を閲覧できる。財務局長と管理者はできることが同じで、名前（肩書き）だけが違う。それ以外は一般。
  * 役割を足したり、できることを変えたりするときはここを直す。
  */
 export const ROLES = ['member', 'finance_chief', 'admin'] as const
@@ -16,12 +16,14 @@ export const ROLE_LABELS: Record<Role, string> = {
 const STAFF = ['finance_chief', 'admin'] as const
 
 export const PERMISSIONS = {
-  /** すべての申請を見る（台帳） */
-  viewAllEntries: STAFF,
+  /** すべての申請（添付の請求書・領収書を含む）を見る。一般も可 */
+  viewAllEntries: ROLES,
   /** 振込先の口座情報を見る */
   viewBankAccount: STAFF,
-  /** 対応済みにする / 戻す */
+  /** 対応済みにする / 戻す、明細ごとの執行額などを直す */
   executeEntries: STAFF,
+  /** 決算シートの出力（Excel・スプレッドシート） */
+  exportSettlement: STAFF,
   /** 予算 CSV の取り込み */
   importBudget: STAFF,
   /** 委員の登録・権限変更 */
