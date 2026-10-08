@@ -130,7 +130,7 @@ function onRowEnter(row: Row) {
 
 <template>
   <div class="sheet-wrap" @mouseleave="preview = new Set()">
-    <table class="sheet">
+    <table class="sheet" :class="{ selectable }">
       <thead>
         <tr>
           <th v-if="selectable" class="check">選択</th>
@@ -237,9 +237,9 @@ tr.lv-setsu .lv-badge { background: var(--stripe-setsu); color: var(--text); }
 .count { font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 tr.line .check { padding-left: .7rem; }
 
-tr.pickable { cursor: v-bind("selectable ? 'pointer' : 'default'"); }
-tr.group.pickable:hover td { filter: brightness(.97); }
-tr.line:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.selectable tr.pickable { cursor: pointer; }
+.selectable tr.group.pickable:hover td { filter: brightness(.97); }
+.selectable tr.line:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
 /* 見出しにマウスを乗せたとき、まとめて選ばれる明細 */
 tr.line.preview td { background: color-mix(in srgb, var(--accent) 9%, transparent); }
 tr.line.preview > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
