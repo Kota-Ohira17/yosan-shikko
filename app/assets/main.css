@@ -102,8 +102,13 @@ h1 { font-size: 1.5rem; font-weight: 500; margin: 0 0 1rem; }
   .layout { grid-template-columns: minmax(0, 1fr); }
   .sidebar { position: static; display: flex; overflow-x: auto; padding: .4rem; }
   .side-link { white-space: nowrap; padding: .45rem .7rem; }
-  .content { padding: 1.25rem 1rem; }
+  .app { padding: 0 .5rem .5rem; }
+  .topbar { padding: .6rem 1rem; margin-bottom: .5rem; }
+  .layout { gap: .5rem; }
+  .content { padding: 1.1rem .9rem; }
   .me-name { display: none; }
+  .card { padding: 1rem; }
+  fieldset { padding: .75rem; }
 }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; max-width: 1200px; }

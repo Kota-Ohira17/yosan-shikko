@@ -170,8 +170,8 @@ async function setDone(row: Row, done: boolean) {
 
     <p v-if="!entries?.length" class="empty">該当する申請はありません。</p>
 
-    <div v-else class="table-wrap">
-      <table>
+    <div v-else class="table-wrap ledger-wrap">
+      <table class="ledger">
         <thead>
           <tr>
             <th>番号</th><th>申請日</th><th>項目番号</th><th>支出項目</th><th>数量</th>
@@ -181,16 +181,16 @@ async function setDone(row: Row, done: boolean) {
         <tbody>
           <template v-for="row in entries" :key="row.id">
             <tr class="clickable" :class="{ done: row.status === 'done' }" @click="toggle(row)">
-              <td>{{ row.seq }}</td>
-              <td>{{ dateTime(row.createdAt) }}</td>
-              <td>{{ row.itemNumber }}</td>
-              <td>{{ row.itemName }}</td>
-              <td>{{ row.quantity }}</td>
-              <td class="num">{{ yen(row.amount) }}</td>
-              <td>{{ row.paymentMethod ?? row.type }}</td>
-              <td>{{ row.deadline }}</td>
-              <td>{{ row.applicantName }}<small>（{{ row.department }}/{{ row.inCharge }}）</small></td>
-              <td>
+              <td class="c-seq">{{ row.seq }}</td>
+              <td class="c-date">{{ dateTime(row.createdAt) }}</td>
+              <td data-label="項目番号">{{ row.itemNumber }}</td>
+              <td class="c-name">{{ row.itemName }}</td>
+              <td data-label="数量">{{ row.quantity }}</td>
+              <td class="num c-amount">{{ yen(row.amount) }}</td>
+              <td data-label="形態">{{ row.paymentMethod ?? row.type }}</td>
+              <td data-label="期限・予定日">{{ row.deadline }}</td>
+              <td data-label="申請者">{{ row.applicantName }}<small>（{{ row.department }}/{{ row.inCharge }}）</small></td>
+              <td class="c-status">
                 <span class="badge" :class="row.status">{{ row.status === 'done' ? `対応済 ${dateTime(row.executedAt)}` : '未対応' }}</span>
               </td>
             </tr>
@@ -307,4 +307,32 @@ async function setDone(row: Row, done: boolean) {
 .ok { color: var(--done); font-size: .85rem; }
 .bank-pick { display: flex; align-items: end; gap: .6rem; }
 .bank-link { white-space: nowrap; padding-bottom: .5rem; }
+
+/* スマホ: 台帳の1行を1枚のカードにして縦に並べる（中の明細の表は横スクロール） */
+@media (max-width: 600px) {
+  .ledger-wrap { background: none; border: none; overflow: visible; }
+  .ledger, .ledger > tbody { display: block; }
+  .ledger > thead { display: none; }
+  .ledger > tbody > tr.clickable {
+    display: grid; grid-template-columns: auto 1fr auto; gap: .15rem .6rem; padding: .7rem .8rem;
+    margin-bottom: .6rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .ledger > tbody > tr.clickable > td { padding: 0; border: none; }
+  .ledger .c-status { order: 1; }
+  .ledger .c-name { order: 2; }
+  .ledger .c-amount { order: 3; }
+  .ledger > tbody > tr.clickable > td[data-label] { order: 4; grid-column: 1 / -1; font-size: .82rem; color: var(--muted); }
+  .ledger > tbody > tr.clickable > td[data-label]::before { content: attr(data-label) "："; }
+  .ledger > tbody > tr.clickable > td[data-label]:empty { display: none; }
+  .ledger .c-seq { font-weight: 700; }
+  .ledger .c-date { color: var(--muted); font-size: .82rem; align-self: center; }
+  .ledger .c-status { text-align: right; }
+  .ledger .c-name { grid-column: 1 / 3; font-weight: 600; margin-top: .2rem; }
+  .ledger .c-amount { align-self: end; font-weight: 700; }
+  .ledger > tbody > tr.detail { display: block; margin: -.7rem 0 .6rem; }
+  .ledger > tbody > tr.detail > td {
+    display: block; overflow-x: auto; border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px;
+  }
+  .exec label { width: 100%; }
+}
 </style>
