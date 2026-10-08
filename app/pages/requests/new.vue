@@ -3,8 +3,6 @@
 import {
   ACCOUNT_TYPES, BUDGET_CHANGES, DELIVERY_PLACES, METHOD_GROUPS, ONLINE_SITES, OTHER_METHODS, PAPER_RECEIPT,
 } from '#shared/constants'
-import { shippingAdvice } from '#shared/shipping'
-
 const { user } = useUserSession()
 const { submit, errors, pending } = useSubmit<{ seq: string }>('/api/entries')
 
@@ -63,20 +61,6 @@ const itemVendors = computed(() => [...new Set(form.budgetLineKeys
 useAutoFill(toRef(form, 'purchase'), computed(() => itemVendors.value.join('、')))
 useAutoFill(toRef(form, 'site'), computed(() => (itemVendors.value.length === 1 ? siteOfVendor(itemVendors.value[0]!) : '')))
 useAutoFill(toRef(form, 'quantity'), useQuantityOfItems(toRef(form, 'budgetLineKeys'), toRef(form, 'itemQuantities')))
-
-// 発注: 今回の金額（明細の執行額、未入力なら予算額の合計）と、同じサイトの未対応の発注から送料の案内を出す
-const { data: budgetLines } = useBudgetLines()
-const orderAmount = computed(() => {
-  const byKey = new Map(budgetLines.value.map(l => [l.key, l]))
-  return form.budgetLineKeys.reduce((s, k) => {
-    const a = form.itemAmounts[k]
-    return s + (typeof a === 'number' ? a : byKey.get(k)?.budgetAmount ?? 0)
-  }, 0)
-})
-const { data: pendingOrders } = useFetch('/api/entries', { query: { view: '発注' }, lazy: true, server: false, default: () => [] })
-const shipping = computed(() => (methodGroup.value === '発注' && form.site
-  ? shippingAdvice(form.site, orderAmount.value, pendingOrdersOf(pendingOrders.value, form.site))
-  : null))
 
 /** 2段目の執行形態（現金執行 / カード決済 / その他） */
 const otherType = computed(() => OTHER_METHODS.find(m => m.label === form.otherChoice)?.type ?? (form.otherChoice ? 'その他' : ''))
@@ -201,9 +185,7 @@ async function onSubmit() {
       <fieldset v-else-if="methodGroup === '発注'">
         <legend>発注</legend>
         <p class="section-desc">ZAIが駒場祭委員会の各種アカウントで発注を行います。</p>
-        <RadioWithOther v-model="form.site" label="通販サイト" :options="ONLINE_SITES" other required />
-        <ShippingNotice :advice="shipping" :site="form.site" />
-        <label><span>商品ページのリンク<span class="req">*</span></span>
+        <RadioWithOther v-model="form.site" label="通販サイト" :options="ONLINE_SITES" other required />        <label><span>商品ページのリンク<span class="req">*</span></span>
           <textarea v-model="form.url" rows="3" placeholder="複数ある場合は改行して入力してください" required />
         </label>
         <label><span>数量<span class="req">*</span></span><input v-model="form.quantity" required></label>
