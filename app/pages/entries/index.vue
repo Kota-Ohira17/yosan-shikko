@@ -41,8 +41,15 @@ function methodLabel(row: Row) {
 }
 
 /** 「発注」で見ているときの通販サイトの絞り込み（'' はすべて） */
-const siteFilter = ref('')
-watch(view, () => { siteFilter.value = '' })
+// URL（?site=）に持たせて、未対応の発注のまとめからそのサイトへ飛べるようにする。形態を切り替えると外れる
+const siteFilter = computed({
+  get: () => String(route.query.site ?? ''),
+  set: v => router.replace({ query: { view: '発注', ...(v ? { site: v } : {}) } }),
+})
+/** まとめて発注の欄に出す、絞り込んだサイトの未対応の発注 */
+const batchRows = computed(() => (view.value === '発注' && siteFilter.value
+  ? shownEntries.value.filter(r => r.status === 'pending')
+  : []))
 const orderSites = computed(() => [...new Set((entries.value ?? []).filter(r => r.type === '発注').map(r => siteOf(r) || '（未記入）'))])
 /** そのサイトの未対応の発注の件数（絞り込みボタンの横に出す） */
 const pendingCount = (site: string) => (entries.value ?? [])
@@ -207,11 +214,21 @@ async function setDone(row: Row, done: boolean) {
       </button>
     </nav>
 
+    <OrderBatch
+      v-if="batchRows.length && can('executeEntries')"
+      :site="siteFilter"
+      :rows="batchRows"
+      @done="refresh"
+    />
+    <p v-else-if="view === '発注' && !siteFilter && orderSummary.length && can('executeEntries')" class="hint">
+      通販サイトを選ぶと、そのサイトの未対応の発注をまとめて対応済みにできます。
+    </p>
+
     <section v-if="orderSummary.length" class="order-summary" aria-label="未対応の発注（サイト別）">
       <strong>未対応の発注（サイト別）</strong>
       <ul>
         <li v-for="s in orderSummary" :key="s.site">
-          {{ s.site }}：{{ s.count }}件・合計{{ yen(s.total) }}
+          <NuxtLink :to="{ query: { view: '発注', site: s.site } }">{{ s.site }}</NuxtLink>：{{ s.count }}件・合計{{ yen(s.total) }}
           <span v-if="s.freeFrom == null" class="muted">（送料無料の基準なし。まとめて発注すると送料1回分）</span>
           <span v-else-if="s.total >= s.freeFrom" class="ok">まとめれば送料無料（基準 {{ yen(s.freeFrom) }}）</span>
           <span v-else class="short">送料無料まであと{{ yen(s.freeFrom - s.total) }}（基準 {{ yen(s.freeFrom) }}）</span>
