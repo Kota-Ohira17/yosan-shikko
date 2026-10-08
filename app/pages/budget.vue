@@ -4,8 +4,8 @@ if (!can('importBudget')) await navigateTo('/')
 
 const { data: lines, refresh } = await useBudgetLines()
 const file = ref<File | null>(null)
-/** 取り込む予算の種類（auto は CSV から推測） */
-const kind = ref<'auto' | 'main' | 'revised'>('auto')
+/** 取り込む予算の種類（どちらか必ず選ぶ） */
+const kind = ref<'' | 'main' | 'revised'>('')
 const budgetKind = useBudgetKind()
 const pending = ref(false)
 const errors = ref<string[]>([])
@@ -69,14 +69,13 @@ const filtered = computed(() => {
       <form @submit.prevent="onImport">
         <fieldset class="kind">
           <legend>予算の種類</legend>
-          <label class="check"><input v-model="kind" type="radio" value="auto"> 自動で判定する（シート名の「補正」や列名から）</label>
-          <label class="check"><input v-model="kind" type="radio" value="main"> 本予算</label>
+          <label class="check"><input v-model="kind" type="radio" value="main" required> 本予算</label>
           <label class="check"><input v-model="kind" type="radio" value="revised"> 補正予算</label>
         </fieldset>
         <label>CSV ファイル<input type="file" accept=".csv,text/csv" required @change="file = ($event.target as HTMLInputElement).files?.[0] ?? null"></label>
         <ul v-if="errors.length" class="error"><li v-for="e in errors" :key="e">{{ e }}</li></ul>
         <p v-if="result" class="success">{{ result.budgetKind }}として{{ result.count }}件の明細を取り込みました（合計 {{ formatYen(result.total) }}）。</p>
-        <button type="submit" :disabled="pending || !file">{{ pending ? '取り込み中…' : '取り込む' }}</button>
+        <button type="submit" :disabled="pending || !file || !kind">{{ pending ? '取り込み中…' : '取り込む' }}</button>
       </form>
     </div>
 

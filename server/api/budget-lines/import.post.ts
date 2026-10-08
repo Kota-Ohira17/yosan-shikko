@@ -2,7 +2,7 @@ import type { BudgetKind } from '../../utils/budget'
 
 /**
  * 本予算または補正予算の「支出」シートの CSV を取り込み、予算明細を全件入れ替える（財務局長・管理者のみ）。
- * どちらの予算かは kind（main: 本予算 / revised: 補正予算）で指定する。auto か未指定なら CSV から推測する。
+ * どちらの予算かは kind（main: 本予算 / revised: 補正予算）で必ず指定する。
  * 申請側は明細の内容をコピーして持っているので、入れ替えても過去の申請は変わらない。
  */
 export default defineEventHandler(async (event) => {
@@ -14,8 +14,9 @@ export default defineEventHandler(async (event) => {
   const text = decodeCsv(file.data)
   const lines = parseBudgetCsv(text)
   const kindPart = parts.find(p => p.name === 'kind')?.data.toString()
-  // 値は ASCII（main / revised / auto）で受け取る（送信元の文字コードに左右されないように）
-  const budgetKind: BudgetKind = kindPart === 'main' ? '本予算' : kindPart === 'revised' ? '補正予算' : detectBudgetKind(text)
+  // 値は ASCII（main / revised）で受け取る（送信元の文字コードに左右されないように）
+  const budgetKind: BudgetKind | null = kindPart === 'main' ? '本予算' : kindPart === 'revised' ? '補正予算' : null
+  if (!budgetKind) throw createError({ statusCode: 400, message: '本予算か補正予算かを選んでください' })
   if (!lines.length) {
     throw createError({ statusCode: 400, message: '金額の入った明細が見つかりませんでした。「支出」シートの CSV か確認してください' })
   }

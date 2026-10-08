@@ -108,6 +108,8 @@ input, select, textarea {
   background: var(--surface); color: var(--text); width: 100%;
 }
 input[type="checkbox"] { width: auto; }
+/* 選択肢が短い選択欄は、横いっぱいに広げず中身の幅にする */
+select.fit { width: auto; max-width: 100%; justify-self: start; }
 /* チェックボックス・ラジオボタンもボタンと同じ色にする */
 input[type="checkbox"], input[type="radio"] { accent-color: #c49a87; }
 

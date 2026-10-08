@@ -93,7 +93,7 @@ async function onSubmit() {
       <label v-if="!hasItems">立替金額（円）<YenInput v-model="form.amount" required @input="onAmountInput" /></label>
       <label>証憑ファイル<input type="file" accept="application/pdf,image/*" required @change="file = ($event.target as HTMLInputElement).files?.[0] ?? null"></label>
       <label>返金時期
-        <select v-model="form.refundTiming"><option>委員返金と同時</option><option>できる限り早く</option></select>
+        <select v-model="form.refundTiming" class="fit"><option>委員返金と同時</option><option>できる限り早く</option></select>
       </label>
 
       <ul v-if="errors.length" class="error"><li v-for="e in errors" :key="e">{{ e }}</li></ul>

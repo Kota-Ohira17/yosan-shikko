@@ -81,25 +81,6 @@ function parseMoney(value: string) {
 
 export type BudgetKind = '本予算' | '補正予算'
 
-/**
- * 本予算か補正予算かを CSV から推測する。
- * 見出しより上（シート名の行など）に「補正」とあれば補正予算。なければ列で見分ける
- * （本予算は「希望予算額」、補正予算は「予算額」と「単価」）。
- */
-export function detectBudgetKind(text: string): BudgetKind {
-  const rows = parseCsv(text)
-  const headerIndex = rows.findIndex((r) => {
-    const c = columnIndexes(r)
-    return c.number >= 0 && c.amount >= 0
-  })
-  const above = rows.slice(0, Math.max(headerIndex, 0)).flat().join(' ')
-  if (above.includes('補正')) return '補正予算'
-  const header = (rows[headerIndex] ?? []).map(normalizeHeader)
-  if (header.includes('希望予算額')) return '本予算'
-  if (header.includes('単価')) return '補正予算'
-  return '本予算'
-}
-
 export function parseBudgetCsv(text: string): ParsedBudgetLine[] {
   const rows = parseCsv(text)
   const headerIndex = rows.findIndex((r) => {
